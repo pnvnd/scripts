@@ -1,0 +1,33 @@
+{
+    "meta": {
+        "unsubscribe": "http://status.company.io/?unsubscribe=5ta7u5p4g3",
+        "documentation": "https://help.statuspage.io/knowledge_base/topics/webhook-notifications",
+        "generated_at": "2020-02-28T15:00:59.495Z"
+    },
+    "page": {
+        "id": "5ta7u5p4g31d",
+        "status_indicator": "none",
+        "status_description": "All Systems Operational"
+    },
+    "component": {
+        "status": "operational",
+        "name": "Test Application",
+        "created_at": "2019-11-27T14:10:35.528Z",
+        "updated_at": "2020-02-28T15:00:58.453Z",
+        "position": 7,
+        "description": null,
+        "showcase": false,
+        "id": "c0mp0n3nt1d",
+        "page_id": "5ta7u5p4g31d",
+        "group_id": null
+    },
+    "component_update": {
+        "old_status": "under_maintenance",
+        "new_status": "operational",
+        "created_at": "2020-02-28T15:00:58.458Z",
+        "component_type": "Component",
+        "state": "sn_created",
+        "id": "5ta7u5p4g31d",
+        "component_id": "c0mp0n3nt1d"
+    }
+}

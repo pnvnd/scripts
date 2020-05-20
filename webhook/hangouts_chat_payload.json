@@ -1,0 +1,76 @@
+{
+  "cards": [
+    {
+      "sections": [
+        {
+          "widgets": [
+            {
+              "keyValue": {
+                "topLabel": "NEW RELIC $EVENT_TYPE $INCIDENT_ID",
+                "content": "$SEVERITY - $EVENT_STATE",
+                "onClick": {
+                  "openLink": {
+                    "url": "$INCIDENT_URL"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "widgets": [
+            {
+              "keyValue": {
+                "topLabel": "Condition",                
+		"content": "$CONDITION_NAME",
+                "contentMultiline": "true"
+              }
+            },
+            {
+              "keyValue": {
+                "topLabel": "Policy",
+		"content": "$POLICY_NAME",
+                "contentMultiline": "true"
+              }
+            },
+            {
+              "keyValue": {
+                "topLabel": "Details",                
+		"content": "$EVENT_DETAILS",
+                "contentMultiline": "true"
+              }
+            }
+          ]
+        },
+        {
+          "widgets": [
+            {
+              "buttons": [
+                {
+                  "textButton": {
+                    "text": "View $EVENT_TYPE",
+                    "onClick": {
+                      "openLink": {
+                        "url": "$INCIDENT_URL"
+                      }
+                    }
+                  }
+                },
+                {
+                  "textButton": {
+                    "text": "View Runbook",
+                    "onClick": {
+                      "openLink": {
+                        "url": "$RUNBOOK_URL"
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
