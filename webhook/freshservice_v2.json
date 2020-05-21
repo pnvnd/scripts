@@ -1,0 +1,18 @@
+{
+	"description": "Email body description here",
+	"subject": "Email subject line here",
+	"email": "your_email@domain.com",
+	"category": "Your Category",
+	"type": "Incident",
+	"priority": 1,
+	"status": 2,
+	"urgency": 3,
+	"impact": 2,
+	"custom_fields": {
+		"custom_type": "Type",
+		"custom_notes": "Notes",
+    		"custom_subtype":"Subtype",
+    		"custom_env":"Staging"
+	}
+
+}
