@@ -1,4 +1,5 @@
 # Estimate pi, given that you have random (0,1)
+# To run this in interactive mode, use python -i main.py, then estimate_pi(100) for example.
 import random
 
 def estimate_pi(n):
