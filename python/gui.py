@@ -1,7 +1,14 @@
+def resource_path( relative_path ):
+    absolute_path = os.path.abspath( __file__ )
+    root_path = os.path.dirname( absolute_path )
+    base_path = getattr( sys, '_MEIPASS', root_path )
+    return os.path.join( base_path, relative_path )
+
 from tkinter import *
+import os
 
 root = Tk()
-logo = PhotoImage(file="C:\\Users\\Peter\\Documents\\GitHub\\scripts\\python\\heli.png")
+logo = PhotoImage(file= resource_path('heli.png'))
 w1 = Label(root, root.title("Temperature Converter"), image=logo).pack(side="right")
 
 content = """Robocar Poli is cool, but so is Heli!"""
@@ -23,3 +30,5 @@ Radiobutton(root, text="SQL", padx = 2, variable=v, value=2).pack(anchor=E)
 
 #btn["command"]=click
 root.mainloop()
+
+# Windows: Run > cmd > pyinstaller --onefile --noconsole --add-binary heli.png;. gui.py
