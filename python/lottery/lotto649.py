@@ -1,9 +1,17 @@
-﻿# Widgets:
-from tkinter import *
-window = Tk()
-window.iconbitmap(default='favicon.ico')
+﻿def resource_path( relative_path ):
+    absolute_path = os.path.abspath( __file__ )
+    root_path = os.path.dirname( absolute_path )
+    base_path = getattr( sys, '_MEIPASS', root_path )
+    return os.path.join( base_path, relative_path )
 
-img = PhotoImage( file = 'lotto649.png' )
+# Widgets:
+from tkinter import *
+import os
+
+window = Tk()
+#window.iconbitmap(default=resource_path('favicon.ico'))
+
+img = PhotoImage( file = resource_path('lotto649.png') )
 imgLbl = Label( window, image = img )
 label1 = Label( window, relief = 'groove', width = 2 )
 label2 = Label( window, relief = 'groove', width = 2 )
@@ -69,3 +77,5 @@ resBtn.configure( command = reset )
 
 # Sustain window:
 window.mainloop()
+
+# Windows: Run > cmd > pyinstaller --onefile --noconsole --add-binary lotto649.png;. lotto649.py
