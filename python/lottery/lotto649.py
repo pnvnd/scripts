@@ -78,4 +78,4 @@ resBtn.configure( command = reset )
 # Sustain window:
 window.mainloop()
 
-# Windows: Run > cmd > pyinstaller --onefile --noconsole --add-binary lotto649.png;. lotto649.py
+# Windows Freeze: Run > cmd > pyinstaller --onefile --noconsole --add-binary lotto649.png;. lotto649.py
