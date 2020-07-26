@@ -21,4 +21,4 @@ class Solution:
             return False
         return True
 
-    return helper(root, float('-inf'), float('inf'))
+        return helper(root, float('-inf'), float('inf'))

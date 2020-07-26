@@ -23,6 +23,7 @@ def newUser():
         createPass = input("Create password: ")
         users[createLogin] = createPass
         print("\nUser created!\n")
+        # for Linux, file is named C:\Users\Peter\Desktop\logins.txt in current folder
         logins = open("C:\\Users\\Peter\\Desktop\\logins.txt", "a")
         logins.write("\n" + createLogin + " " + createPass)
         logins.close()
