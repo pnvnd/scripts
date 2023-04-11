@@ -203,3 +203,153 @@ Starting in your home directory `~` (or `cd ~`)
     ```
 
 14. If flashing fails, run the command above again, this time, hold the dupont cables in place, as they can get loose and lose contact with the board.
+
+Here's an example of the output when flashing is completed successfully
+```
+pi@rpi4b-8gb:~/opt/game-and-watch-retro-go $ make GCC_PATH=/home/pi/opt/xpack-arm-none-eabi-gcc-12.2.1-1.2/bin/ COMPRESS=lzma GNW_TARGET=mario flash
+Entering 'LCD-Game-Emulator'
+Entering 'retro-go-stm32'
+make[1]: Entering directory '/home/pi/opt/game-and-watch-retro-go'
+[ BASH ] Checking for updated roms
+/home/pi/.local/xPacks/@xpack-dev-tools/openocd/0.12.0-1.1/.content/bin/openocd -f scripts/interface_rpi.cfg -c "program build/gw_retro_go_intflash.bin 0x08000000 verify reset exit"
+xPack Open On-Chip Debugger 0.12.0-01004-g9ea7f3d64-dirty (2023-01-30-15:09)
+Licensed under GNU GPL v2
+For bug reports, read
+        http://openocd.org/doc/doxygen/bugs.html
+DEPRECATED! use 'sysfsgpio swd_nums' not 'sysfsgpio_swd_nums'
+DEPRECATED! use 'sysfsgpio srst_num' not 'sysfsgpio_srst_num'
+none separate
+
+Info : SysfsGPIO JTAG/SWD bitbang driver
+Info : This adapter doesn't support configurable speed
+Info : SWD DPIDR 0x6ba02477
+Info : [stm32h7x.cpu0] Cortex-M7 r1p1 processor detected
+Info : [stm32h7x.cpu0] target has 8 breakpoints, 4 watchpoints
+Info : gdb port disabled
+Info : starting gdb server for stm32h7x.cpu0 on 3333
+Info : Listening on port 3333 for gdb connections
+[stm32h7x.cpu0] halted due to debug-request, current mode: Thread
+xPSR: 0x01000000 pc: 0x080135c4 msp: 0x20020000
+Error: Translation from khz to adapter speed not implemented
+Error executing event reset-init on target stm32h7x.cpu0:
+embedded:startup.tcl:1193: Error:
+in procedure 'program'
+in procedure 'ocd_process_reset'
+in procedure 'ocd_process_reset_inner' called at file "embedded:startup.tcl", line 1193
+** Programming Started **
+Info : Device: STM32H7Ax/7Bx
+Info : flash size probed value 128k
+Info : STM32H7 flash has a single bank
+Info : Bank (0) size is 128 kb, base address is 0x08000000
+Info : Padding image section 0 at 0x0801990c with 4 bytes (bank write end alignment)
+Warn : Adding extra erase range, 0x08019910 .. 0x08019fff
+** Programming Finished **
+** Verify Started **
+** Verified OK **
+** Resetting Target **
+shutdown command invoked
+make[1]: Leaving directory '/home/pi/opt/game-and-watch-retro-go'
+make[1]: Entering directory '/home/pi/opt/game-and-watch-retro-go'
+[ BASH ] Checking for updated roms
+[ BIN ] gw_retro_go_extflash.bin
+scripts/flash_multi.sh build/gw_retro_go_extflash.bin 0
+Preparing chunk 1 / 1 in file /tmp/flash_chunk.6o6k0o
+Flashing!
+xPack Open On-Chip Debugger 0.12.0-01004-g9ea7f3d64-dirty (2023-01-30-15:09)
+Licensed under GNU GPL v2
+For bug reports, read
+        http://openocd.org/doc/doxygen/bugs.html
+DEPRECATED! use 'sysfsgpio swd_nums' not 'sysfsgpio_swd_nums'
+DEPRECATED! use 'sysfsgpio srst_num' not 'sysfsgpio_srst_num'
+none separate
+
+Info : SysfsGPIO JTAG/SWD bitbang driver
+Info : This adapter doesn't support configurable speed
+Info : SWD DPIDR 0x6ba02477
+Info : [stm32h7x.cpu0] Cortex-M7 r1p1 processor detected
+Info : [stm32h7x.cpu0] target has 8 breakpoints, 4 watchpoints
+Info : gdb port disabled
+Info : starting gdb server for stm32h7x.cpu0 on 3333
+Info : Listening on port 3333 for gdb connections
+[stm32h7x.cpu0] halted due to debug-request, current mode: Thread
+xPSR: 0x01000000 pc: 0x080135c4 msp: 0x20020000
+0x20020000
+0x080135c5
+msp (/32): 0x20020000
+
+pc (/32): 0x080135c5
+
+Starting flash app
+State: FLASHAPP_INIT
+Ready!
+Loading data
+xPack Open On-Chip Debugger 0.12.0-01004-g9ea7f3d64-dirty (2023-01-30-15:09)
+Licensed under GNU GPL v2
+For bug reports, read
+        http://openocd.org/doc/doxygen/bugs.html
+DEPRECATED! use 'sysfsgpio swd_nums' not 'sysfsgpio_swd_nums'
+DEPRECATED! use 'sysfsgpio srst_num' not 'sysfsgpio_srst_num'
+none separate
+
+Info : SysfsGPIO JTAG/SWD bitbang driver
+Info : This adapter doesn't support configurable speed
+Info : SWD DPIDR 0x6ba02477
+Info : [stm32h7x.cpu0] Cortex-M7 r1p1 processor detected
+Info : [stm32h7x.cpu0] target has 8 breakpoints, 4 watchpoints
+Info : gdb port disabled
+Info : starting gdb server for stm32h7x.cpu0 on 3333
+Info : Listening on port 3333 for gdb connections
+[stm32h7x.cpu0] halted due to debug-request, current mode: Thread
+xPSR: 0x21070000 pc: 0x080002d0 msp: 0x2001fddc
+Loading image into RAM
+826428 bytes written at address 0x24025800
+downloaded 826428 bytes in 72.018822s (11.206 KiB/s)
+
+65 bytes written at address 0x2000126c
+downloaded 65 bytes in 0.007050s (9.004 KiB/s)
+
+Starting flash process
+Please see the LCD for interactive status.
+State: FLASHAPP_CHECK_HASH_RAM
+State: FLASHAPP_ERASE
+State: FLASHAPP_ERASE
+State: FLASHAPP_ERASE
+State: FLASHAPP_ERASE
+State: FLASHAPP_ERASE
+State: FLASHAPP_ERASE
+State: FLASHAPP_PROGRAM_NEXT
+State: FLASHAPP_PROGRAM
+State: FLASHAPP_PROGRAM
+State: FLASHAPP_PROGRAM
+Done!
+
+
+Programming of chunk 1 / 1 succeeded.
+
+
+Programming of the external flash succeeded.
+
+
+make[1]: Leaving directory '/home/pi/opt/game-and-watch-retro-go'
+make[1]: Entering directory '/home/pi/opt/game-and-watch-retro-go'
+# Reset the DBGMCU configuration register (DBGMCU_CR)
+xPack Open On-Chip Debugger 0.12.0-01004-g9ea7f3d64-dirty (2023-01-30-15:09)
+Licensed under GNU GPL v2
+For bug reports, read
+        http://openocd.org/doc/doxygen/bugs.html
+DEPRECATED! use 'sysfsgpio swd_nums' not 'sysfsgpio_swd_nums'
+DEPRECATED! use 'sysfsgpio srst_num' not 'sysfsgpio_srst_num'
+none separate
+
+Info : SysfsGPIO JTAG/SWD bitbang driver
+Info : This adapter doesn't support configurable speed
+Info : SWD DPIDR 0x6ba02477
+Info : [stm32h7x.cpu0] Cortex-M7 r1p1 processor detected
+Info : [stm32h7x.cpu0] target has 8 breakpoints, 4 watchpoints
+Info : gdb port disabled
+Info : starting gdb server for stm32h7x.cpu0 on 3333
+Info : Listening on port 3333 for gdb connections
+[stm32h7x.cpu0] halted due to debug-request, current mode: Thread
+xPSR: 0x01000000 pc: 0x080135c4 msp: 0x20020000
+make[1]: Leaving directory '/home/pi/opt/game-and-watch-retro-go'
+```
