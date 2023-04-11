@@ -194,7 +194,7 @@ Starting in your home directory `~` (or `cd ~`)
 
 12. If you haven't already done so already, set the environment variable for `OPENOCD`
     ```bash
-    export OPENOCD="/home/pi/.local/xPacks/@xpack-dev-tools/openocd/0.11.0-1.1/.content/bin/openocd"
+    export OPENOCD="/home/pi/.local/xPacks/@xpack-dev-tools/openocd/0.12.0-1.1/.content/bin/openocd"
     ```
 
 13. Flash your memory with compressed ROMs.
