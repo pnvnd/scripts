@@ -121,7 +121,7 @@ Starting in your home directory `~` (or `cd ~`)
     cd game-and-watch-backup
     ```
 
-15. Run these scripts in order, and follow instructions in the prompt.
+15. Remove battery using a flathead screwdriver and use USB-C power instead.  Run these scripts in order, and follow instructions in the prompt to back up your firmware, and unlock the processor.
     ```bash
     ./1_sanity_check.sh rpi mario
     ./2_backup_flash.sh rpi mario
@@ -129,6 +129,13 @@ Starting in your home directory `~` (or `cd ~`)
     ./4_unlock_device.sh rpi mario
     ./5_restore.sh
     ```
+    
+16. By the end of this, you'll have three files on the Raspberry Pi that you _should_ back up properly.
+    | Filename                        | Size (KB) |
+    | ------------------------------- | --------- |
+    | flash_backup_mario.bin          | 1024      |
+    | itcm_backup_mario.bin           | 2         |
+    | internal_flash_backup_mario.bin | 128       |
 
 # Part 3 - Install Retro-Go
 
