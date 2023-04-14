@@ -353,3 +353,47 @@ Info : Listening on port 3333 for gdb connections
 xPSR: 0x01000000 pc: 0x080135c4 msp: 0x20020000
 make[1]: Leaving directory '/home/pi/opt/game-and-watch-retro-go'
 ```
+# Part 4 - Clean Up and Get More Space
+
+0. Before proceeding, remember to set your environment variables.  The only real difference here is a new path to `OPENOCD`.
+   ```bash
+   export OPENOCD="/opt/openocd-git/bin/openocd"
+   export PATH=$PATH:/home/pi/opt/xpack-arm-none-eabi-gcc-12.2.1-1.2/bin/
+   export GCC_PATH=/home/pi/opt/xpack-arm-none-eabi-gcc-12.2.1-1.2/bin/
+   export ADAPTER=rpi
+   export GNW_TARGET=mario
+   export COMPRESS=lzma
+   export INTFLASH_BANK=1
+   ```
+
+1. Return to the previous `~/opt/` directory
+   ```bash
+   cd ..
+   ```
+2. Clone the patched version of [openocd](https://github.com/kbeckmann/ubuntu-openocd-git-builder) and go into the root directory of this repository
+   ```bash
+   git clone https://github.com/kbeckmann/ubuntu-openocd-git-builder.git
+   cd ubuntu-openocd-git-builder
+   ```
+   
+3. Compile and install the patched version of openocd
+   ```bash
+   ./build.sh
+   sudo dpkg -i openocd-git_*_armhf.deb
+   sudo apt-get -y -f install
+   ```
+   
+4. Go back to the `game-and-watch-retro-go` repository
+   ```bash
+   cd ~/opt/game-and-watch-retro-go
+   ```
+   
+5. Double-check environment variables.  Once confirmed, flash the firmware
+   ```bash
+   make clean
+   make flash
+   ```
+6. (Optional) To get a little more room, disable saving by flashing again with the following command.  Just note, that when you try to save, you get a little blue screen.  Not recommended if you play long games such as Final Fantasy:
+   ```bash
+   make STATE_SAVING=0 flash
+   ```
