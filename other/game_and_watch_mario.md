@@ -40,6 +40,9 @@ This guide is based on the `vendo232` guides:
 | Start | NRST | **SWDIO** | **GND** | VDD | **SWCLK** |
 
 # Part 1 - Get Respberry Pi Ready
+
+<img width="341" alt="screen1" src="https://user-images.githubusercontent.com/65086728/232258492-266672c5-a47f-494b-b639-a365b2826386.png">
+
 1. Install and launch the [Rasberry Pi Imager](https://www.raspberrypi.com/software/)
 2. Choose OS > Raspberry Pi OS (other) > Raspberry Pi OS Lite (32-bit)
 3. Select Advanced options and `Enable SSH` (Use password authentication)
@@ -51,6 +54,7 @@ This guide is based on the `vendo232` guides:
    | GPIO25 (pin 22) | ⑤ (SWCLK) |
    | GND (pin 39)    | ③ (GND)   |
    
+![screen2](https://user-images.githubusercontent.com/65086728/232258587-76689e13-ba04-4d96-a301-2d0fcc9f747f.png)
 
 # Part 2 - Setup Raspberry Pi
 
@@ -131,11 +135,11 @@ Starting in your home directory `~` (or `cd ~`)
     ```
     
 16. By the end of this, you'll have three files on the Raspberry Pi that you _should_ back up properly.
-    | Filename                        | Size (KB) |
-    | ------------------------------- | --------- |
-    | flash_backup_mario.bin          | 1024      |
-    | itcm_backup_mario.bin           | 2         |
-    | internal_flash_backup_mario.bin | 128       |
+    | Filename                        | Size (KB) | CRC32    |
+    | ------------------------------- | --------- | -------- |
+    | flash_backup_mario.bin          | 1024      | 1B6BB635 |
+    | itcm_backup_mario.bin           | 2         | 3B04248C |
+    | internal_flash_backup_mario.bin | 128       | EFAAEFE6 |
 
 # Part 3 - Install Retro-Go
 
@@ -205,6 +209,8 @@ Starting in your home directory `~` (or `cd ~`)
 14. If flashing fails, run the command above again, this time, hold the dupont cables in place, as they can get loose and lose contact with the board.
 
 Here's an example of the output when flashing is completed successfully
+![screen3](https://user-images.githubusercontent.com/65086728/232258689-5a80fa4a-adc2-4819-89d6-d80eb5f68ea6.png)
+
 ```
 pi@rpi4b-8gb:~/opt/game-and-watch-retro-go $ make GCC_PATH=/home/pi/opt/xpack-arm-none-eabi-gcc-12.2.1-1.2/bin/ COMPRESS=lzma GNW_TARGET=mario flash
 Entering 'LCD-Game-Emulator'
@@ -381,7 +387,7 @@ This section will be new for those following the original v1, v2, and v3 guides.
 
 1. Return to the previous `~/opt/` directory
    ```bash
-   cd ..
+   cd ~/opt/
    ```
 2. Clone the patched version of [openocd](https://github.com/kbeckmann/ubuntu-openocd-git-builder) and go into the root directory of this repository
    ```bash
@@ -406,7 +412,12 @@ This section will be new for those following the original v1, v2, and v3 guides.
    make clean
    make -j$(nproc) flash
    ```
-6. (Optional) To get a little more room, disable the saving feature by flashing again with the following command.  Just note, that when you try to save, you get a little blue screen.  Not recommended if you play long games such as Final Fantasy or Pokémon:
+6. (Optional) To get a little more room, disable the saving feature by flashing again with the following command. Not recommended if you play long games such as Final Fantasy or Pokémon.  This option was able to fit up to 17 NES ROMs with `lzma` compression on a 1MB chip.
    ```bash
    make -j$(nproc) STATE_SAVING=0 flash
    ```
+   ![screen4](https://user-images.githubusercontent.com/65086728/232258749-bd66ab11-0c77-4c34-932f-f6336d1573cd.png)
+
+7. (Optional) Use a coin-sized piece of [Mr. Clean Magic Eraser](https://www.mrclean.com/en-us/shop-products/magic-erasers) to remove any print on the gold plate.  Be cause not to rub off too much of the red plastic.
+   ![screen5](https://user-images.githubusercontent.com/65086728/232258871-c3348418-3bb1-4817-98f8-feb235b671c9.png)
+
