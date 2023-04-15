@@ -354,16 +354,29 @@ xPSR: 0x01000000 pc: 0x080135c4 msp: 0x20020000
 make[1]: Leaving directory '/home/pi/opt/game-and-watch-retro-go'
 ```
 # Part 4 - Clean Up and Get More Space
+This section will be new for those following the original v1, v2, and v3 guides.  Consider this section as the continuation of the `vendo232` guide.
 
 0. Before proceeding, remember to set your environment variables.  The only real difference here is a new path to `OPENOCD`.
    ```bash
    export OPENOCD="/opt/openocd-git/bin/openocd"
-   export PATH=$PATH:/home/pi/opt/xpack-arm-none-eabi-gcc-12.2.1-1.2/bin/
    export GCC_PATH=/home/pi/opt/xpack-arm-none-eabi-gcc-12.2.1-1.2/bin/
    export ADAPTER=rpi
    export GNW_TARGET=mario
    export COMPRESS=lzma
    export INTFLASH_BANK=1
+   ```
+   Alternatively, add these environment variables permanantly by adding this to `/etc/environment` so that you don't need to set these every session.
+   ```bash
+   sudo nano /etc/environment
+   ```
+   The contents should look like this:
+   ```bash
+   OPENOCD=/opt/openocd-git/bin/openocd
+   GCC_PATH=/home/pi/opt/xpack-arm-none-eabi-gcc-12.2.1-1.2/bin/
+   ADAPTER=rpi
+   GNW_TARGET=mario
+   COMPRESS=lzma
+   INTFLASH_BANK=1
    ```
 
 1. Return to the previous `~/opt/` directory
@@ -388,12 +401,12 @@ make[1]: Leaving directory '/home/pi/opt/game-and-watch-retro-go'
    cd ~/opt/game-and-watch-retro-go
    ```
    
-5. Double-check environment variables.  Once confirmed, flash the firmware
+5. Double-check environment variables.  Once confirmed, flash the firmware with `make -j$(nproc)` which should be `make -j4` for Raspberry Pi 4B devices.  This should speed up the process when you `make build` significantly.
    ```bash
    make clean
-   make flash
+   make -j$(nproc) flash
    ```
-6. (Optional) To get a little more room, disable saving by flashing again with the following command.  Just note, that when you try to save, you get a little blue screen.  Not recommended if you play long games such as Final Fantasy:
+6. (Optional) To get a little more room, disable the saving feature by flashing again with the following command.  Just note, that when you try to save, you get a little blue screen.  Not recommended if you play long games such as Final Fantasy or Pokémon:
    ```bash
-   make STATE_SAVING=0 flash
+   make -j$(nproc) STATE_SAVING=0 flash
    ```
