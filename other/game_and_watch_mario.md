@@ -419,6 +419,6 @@ This section will be new for those following the original v1, v2, and v3 guides.
    ```
    ![screen4](https://user-images.githubusercontent.com/65086728/232258749-bd66ab11-0c77-4c34-932f-f6336d1573cd.png)
 
-7. (Optional) Use a coin-sized piece of [Mr. Clean Magic Eraser](https://www.mrclean.com/en-us/shop-products/magic-erasers) to remove any print on the gold plate.  Be cause not to rub off too much of the red plastic.
+7. (Optional) Use a coin-sized piece of [Mr. Clean Magic Eraser](https://www.mrclean.com/en-us/shop-products/magic-erasers) to remove any print on the gold plate.  Be careful not to rub off too much of the red plastic.
    ![screen5](https://user-images.githubusercontent.com/65086728/232258871-c3348418-3bb1-4817-98f8-feb235b671c9.png)
 
