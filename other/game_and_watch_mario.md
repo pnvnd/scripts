@@ -365,11 +365,11 @@ This section will be new for those following the original v1, v2, and v3 guides.
 0. Before proceeding, remember to set your environment variables.  The only real difference here is a new path to `OPENOCD`.
    ```bash
    export OPENOCD="/opt/openocd-git/bin/openocd"
-   export GCC_PATH=/home/pi/opt/xpack-arm-none-eabi-gcc-12.2.1-1.2/bin/
-   export ADAPTER=rpi
-   export GNW_TARGET=mario
-   export COMPRESS=lzma
-   export INTFLASH_BANK=1
+   export GCC_PATH="/home/pi/opt/xpack-arm-none-eabi-gcc-12.2.1-1.2/bin/"
+   export ADAPTER="rpi"
+   export GNW_TARGET="mario"
+   export COMPRESS="lzma"
+   export INTFLASH_BANK="1"
    ```
    Alternatively, add these environment variables permanantly by adding this to `/etc/environment` so that you don't need to set these every session.
    ```bash
