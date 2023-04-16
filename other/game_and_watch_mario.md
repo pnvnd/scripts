@@ -408,7 +408,7 @@ This section will be new for those following the original v1, v2, and v3 guides.
    cd ~/opt/game-and-watch-retro-go
    ```
    
-5. Double-check environment variables.  Once confirmed, flash the firmware with `make -j$(nproc)` which should be `make -j4` for Raspberry Pi 4B devices.  This should speed up the process when you `make build` significantly.
+5. Double-check environment variables.  Once confirmed, flash the firmware with `make -j$(nproc)` (which should be `make -j4` for Raspberry Pi 4B devices).  This should speed up the process when you use `make` significantly.
    ```bash
    make clean
    make -j$(nproc) flash
