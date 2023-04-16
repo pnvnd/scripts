@@ -384,6 +384,7 @@ This section will be new for those following the original v1, v2, and v3 guides.
    COMPRESS=lzma
    INTFLASH_BANK=1
    ```
+   Use `CTRL+X` to exit, and when prompted to save, enter `Yes` to proceed.
 
 1. Return to the previous `~/opt/` directory
    ```bash
