@@ -124,13 +124,73 @@ Starting in your home directory `~` (or `cd ~`)
     cd game-and-watch-backup
     ```
 
-15. Remove battery using a flathead screwdriver and use USB-C power instead.  Run these scripts in order, and follow instructions in the prompt to back up your firmware, and unlock the processor.
+15. Remove battery using a flathead screwdriver and use USB-C power instead.  Run these scripts in order, and follow instructions in the prompt to back up your firmware, and unlock the processor. If script fails, unplug USB-C power and plug it back in.
     ```bash
     ./1_sanity_check.sh rpi zelda
     ./2_backup_flash.sh rpi zelda
     ./3_backup_internal_flash.sh rpi zelda
     ./4_unlock_device.sh rpi zelda
     ./5_restore.sh rpi zelda
+    ```
+    #### 1_sanitycheck.sh
+    ```
+    Running sanity checks...
+    Looks good!
+    ```
+    
+    #### 2_backup_flash.sh
+    ```
+    Make sure your Game & Watch is turned on and in the time screen. Press return when ready!
+    
+    Attempting to dump flash using adapter rpi.
+    Running OpenOCD... (This can take up to a few minutes.)
+    Validating ITCM dump...
+    Extracting checksummed part...
+    dd if=backups/flash_backup_zelda.bin of=backups/flash_backup_checksummed_zelda.bin bs=16 skip=8192 count=197962
+    Validating checksum...
+    Looks good! Successfully backed up the (encrypted) SPI flash to backups/flash_backup_zelda.bin!
+    ```
+    
+    #### 3_backup_internal_flash.sh
+    ```
+    Validating ITCM dump...
+    This step will overwrite the contents of the SPI flash chip that we backed up in step 2.
+    It will be restored in step 5. Continue? (y/N)
+    yGenerating encrypted flash image from backed up data...
+    Programming payload to SPI flash...
+    Flash successfully programmed. Now do the following procedure:
+    - Disconnect power from the device
+    - Power it again
+    - Press and hold the power button on the device
+    - The LCD should show a blue screen
+    - If it's not blue, you can try pressing the Time button on the device
+    - Press return (while still holding the power button)!
+
+    Dumping internal flash...
+    Verifying internal flash backup...
+    Device backed up successfully
+    ```
+    
+    #### 4_unlock_device.sh
+    ```
+    Unlocking your device will erase its internal flash. Even though your backup
+    is validated, this still can go wrong. Are you sure? (y/N)
+    yValidating internal flash backup before proceeding...
+    Unlocking device... (Takes up to 30 seconds.)
+    Congratulations, your device has been unlocked. Just a few more steps!
+    - The Game & Watch will not yet be functional
+    - Disconnect power from the device for the changes to take full effect
+    - Power it again
+    - Run the 5_restore.sh script to restore the SPI and Internal Flash.
+    ```
+
+    #### 5_restore.sh
+    ```
+    Ok, restoring original firmware! (We will not lock the device, so you won't have to repeat this procedure!)
+    Restoring SPI flash...
+    Restoring internal flash...
+    Success, your device should be running the original firmware again!
+    (You should power-cycle the device now)
     ```
     
 16. By the end of this, you'll have three files on the Raspberry Pi that you _should_ back up properly.
