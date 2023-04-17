@@ -131,7 +131,7 @@ Starting in your home directory `~` (or `cd ~`)
     ./2_backup_flash.sh rpi mario
     ./3_backup_internal_flash.sh rpi mario
     ./4_unlock_device.sh rpi mario
-    ./5_restore.sh
+    ./5_restore.sh rpi mario
     ```
     
 16. By the end of this, you'll have three files on the Raspberry Pi that you _should_ back up properly.
