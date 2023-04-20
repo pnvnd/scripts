@@ -53,6 +53,9 @@ This guide is based on the `vendo232` guides:
    | GPIO24 (pin 18) | ② (SWDIO) |
    | GPIO25 (pin 22) | ⑤ (SWCLK) |
    | GND (pin 39)    | ③ (GND)   |
+   
+
+![screen2](https://user-images.githubusercontent.com/65086728/233509613-a76e7c6d-dfde-4b79-bd12-a26a565d74c2.jpeg)
 
 
 # Part 2 - Setup Raspberry Pi
@@ -295,6 +298,8 @@ Starting in your home directory `~` (or `cd ~`)
 15. If flashing fails, run the command above again, this time, hold the dupont cables in place, as they can get loose and lose contact with the board.
 
 Here's an example of the output when flashing is completed successfully (Flashing 4 MB took about 10 minutes).
+![screen3](https://user-images.githubusercontent.com/65086728/233509665-56b40973-3c4d-4748-b9ec-b07ce924a9f6.jpeg)
+
 
 ```
 pi@rpi4b-8gb:~/opt/game-and-watch-retro-go $ make -j4 flash
@@ -602,7 +607,11 @@ This section will be new for those following the original v1, v2, and v3 guides.
    make clean
    make -j$(nproc) flash
    ```
-6. (Optional) To get a little more room, disable the saving feature by flashing again with the following command. Not recommended if you play long games such as Final Fantasy or Pokémon.  This option was able to fit up to 17 NES ROMs with `lzma` compression on a 1MB chip.
+   This can fit about 27 games with saving enabled.  The approximate ratio for ROMs to save file is roughly 1:7
+   ![screen4](https://user-images.githubusercontent.com/65086728/233509964-13583a2c-cfae-486e-a464-5ff1f1bf255d.jpeg)
+
+   
+6. (Optional) To get a little more room, disable the saving feature by flashing again with the following command. Not recommended if you play long games such as Final Fantasy or Pokémon.  This option was able to fit up to 64 NES ROMs with `lzma` compression on a 4MB chip.
    ```bash
    make -j$(nproc) STATE_SAVING=0 flash
    ```
