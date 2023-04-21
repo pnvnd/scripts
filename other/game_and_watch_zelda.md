@@ -616,4 +616,6 @@ This section will be new for those following the original v1, v2, and v3 guides.
    make -j$(nproc) STATE_SAVING=0 flash
    ```
 
-7. (Optional) Use a coin-sized piece of [Mr. Clean Magic Eraser](https://www.mrclean.com/en-us/shop-products/magic-erasers) to remove any print on the gold plate.  Be careful not to rub off too much of the red plastic.
+7. (Optional) Use a coin-sized piece of [Mr. Clean Magic Eraser](https://www.mrclean.com/en-us/shop-products/magic-erasers) to remove any print on the gold plate.  Be careful not to rub off too much of the green plastic.
+   ![screen5](https://user-images.githubusercontent.com/65086728/233517437-ebce993a-6547-4b9d-bd40-4e60ead61ad7.jpeg)
+
