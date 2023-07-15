@@ -619,3 +619,379 @@ This section will be new for those following the original v1, v2, and v3 guides.
 7. (Optional) Use a coin-sized piece of [Mr. Clean Magic Eraser](https://www.mrclean.com/en-us/shop-products/magic-erasers) to remove any print on the gold plate.  Be careful not to rub off too much of the green plastic.
    ![screen5](https://user-images.githubusercontent.com/65086728/233517437-ebce993a-6547-4b9d-bd40-4e60ead61ad7.jpeg)
 
+# Part 5 - Get More Emulators and Box Art
+
+You should have done part 4 before going to this part.  So why would you want to get more emulators and box art?  For one, the NES emulator in the original `game-and-watch-retro-go` repository doesn't do too well with vertical scrolling games, and does not have a Genesis/Mega Drive emulator.  Another reason is that having box art looks nice.
+
+![image](https://github.com/pnvnd/scripts/assets/65086728/98687cd9-4392-4f2c-b094-1244365d3a70)
+
+1. As usual, we'll set some environment variables, and will explain after.
+   ```bash
+   export OPENOCD="/opt/openocd-git/bin/openocd"
+   export GCC_PATH="/home/pi/opt/xpack-arm-none-eabi-gcc-12.2.1-1.2/bin/"
+   export ADAPTER="rpi"
+   export GNW_TARGET="zelda"
+   export COMPRESS="lzma"
+   export INTFLASH_BANK="1"
+   export COVERFLOW="1"
+   export JPG_QUALITY="90"
+   ```
+
+2. This time, we'll be using the [@sylverb](https://github.com/sylverb) retro-go repository.  Since we already have a repository called `game-and-watch-retro-go` we'll need to put this in another location or rename the directory.  In this case, we'll keep the same file structure and rename the directory to keep it simple.  We'll also clone two other repositories to get cover art, if needed.
+   ```bash
+   cd opt
+   git clone --recurse-submodules https://github.com/sylverb/game-and-watch-retro-go game-and-watch-retro-go-sylverb
+   git clone https://github.com/ducalex/retro-go-covers
+   git clone https://github.com/n-i-x/gnw-covers
+   ```
+
+3. Put your ROMs in the `game-and-watch-retro-go-sylverb/roms` folder as usual. Now we're ready to get the box art.  Note the `chmod +x` will be needed later to allow the script to be executed.
+   ```bash
+   cd ~/opt/gnw-covers
+   sudo chmod +x make_covers.sh
+   sudo nano make_covers.sh
+   ```
+4. You should now edit the contents of the `make_covers.sh` file.  Change the path of `roms_dir` and `covers_dir`.  Only two lines should change and it'll look something like this:
+   ```bash
+   roms_dir="/home/pi/opt/game-and-watch-retro-go-sylverb/roms"
+   covers_dir="/home/pi/opt/retro-go-covers"
+   ```
+5. Once the paths have been edited, exit by using `CTRL+X`.  Then, press `Y` then `ENTER` to save. To get the box art for the games in the roms folder, do one (or many) of the following:
+   ```bash
+   sudo ./make_covers.sh nes
+   sudo ./make_covers.sh gb
+   sudo ./make_covers.sh gg
+   ```
+6. After running this script, notice `PNG` files with the same filename as the rom is created.  Note that the `retro-go-covers` repository does not have box art for Genesis/Mega Drive games.  However, you can include a `PNG` in the same directory of the rom with the same file name as the rom to get around this. To get a more accurate gauge on how much your device can hold, do the following:
+   ```bash
+   cd ~/opt/game-and-watch-retro-go-sylverb
+   make clean
+   make -j4 size
+   ```
+7. During the process above, the `PNG` files will be coverted to `IMG` files to be used for the box art.  As well, if applicable, your roms will be compressed with a `LZMA` extension.  You can kind of gauge how much memory you'll need by adding up the `IMG` and `LZMA`, and add roughly 20% for save states.  This is what it may look like if `make -j4 size` runs successfully:
+   ```bash
+   External flash usage
+    Capacity:      3575808 Bytes (  3.410 MB)
+    Usage:         3556871 Bytes (  3.392 MB)
+    Free:            18937 Bytes (  0.018 MB)
+    
+    itcram  0 / 65536       (65536 bytes free (0.062 MB))
+    dtcram  118512 / 131072 (12560 bytes free)
+    ram_uc  307200 / 307200 (0 bytes free (0.000 MB))
+    ram     0 / 0   (0 bytes free (0.000 MB))
+    ram_emu_nes     0 / 741376      (741376 bytes free (0.707 MB))
+    ram_emu_nes_fceu        166088 / 741376 (575288 bytes free (0.549 MB))
+    ram_emu_gb      287200 / 741376 (454176 bytes free (0.433 MB))
+    ram_emu_sms     719556 / 741376 (21820 bytes free (0.021 MB))
+    ram_emu_pce     0 / 741376      (741376 bytes free (0.707 MB))
+    ram_emu_gw      0 / 741376      (741376 bytes free (0.707 MB))
+    ram_emu_msx     0 / 741376      (741376 bytes free (0.707 MB))
+    ram_emu_wsv     0 / 741376      (741376 bytes free (0.707 MB))
+    ram_emu_md      0 / 741376      (741376 bytes free (0.707 MB))
+    ram_emu_a7800   0 / 741376      (741376 bytes free (0.707 MB))
+    ram_emu_amstrad 0 / 741376      (741376 bytes free (0.707 MB))
+    ahbram  3840 / 131072   (127232 bytes free (0.121 MB))
+    flash   199576 / 262144 (62568 bytes free (0.060 MB))
+    cacheflash      0 / 0   (0 bytes free (0.000 MB))
+    extflash        3556871 / 3575808       (18937 bytes free (0.018 MB))
+    offsaveflash    0 / 0   (0 bytes free (0.000 MB))
+    saveflash       614400 / 614400 (0 bytes free (0.000 MB))
+    fbflash 0 / 0   (0 bytes free (0.000 MB))
+   ```
+8. If you're able to get the estimated size at the end successfully without seeing `make: *** [Makefile.common:647: build/gw_retro_go.elf] Error 1` or `make: *** [Makefile.common:581: build/roms.a] Error 255` then you are ready to flash your device.  If not, remove some roms and try again.
+   ```bash
+   make -j4 flash
+   ```
+9. If you get `Error: Error connecting DP: cannot read IDR` try fixing your connection, or wiggle your cables.  Otherwise, a successful flash has an output that looks like this:
+
+```
+Entering 'LCD-Game-Emulator'
+Entering 'blueMSX-go'
+Entering 'caprice32-go'
+Entering 'fceumm-go'
+Entering 'gwenesis'
+Entering 'potator'
+Entering 'prosystem-go'
+Entering 'retro-go-stm32'
+make[1]: Entering directory '/home/pi/opt/game-and-watch-retro-go-sylverb'
+[ BASH ] Checking for updated roms
+/opt/openocd-git/bin/openocd -f scripts/interface_rpi.cfg -c "program build/gw_retro_go_intflash.bin 0x08000000 verify reset exit"
+Open On-Chip Debugger 0.12.0+dev-00150-g91bd43134-dirty (2023-04-14-14:03)
+Licensed under GNU GPL v2
+For bug reports, read
+        http://openocd.org/doc/doxygen/bugs.html
+DEPRECATED! use 'sysfsgpio swd_nums' not 'sysfsgpio_swd_nums'
+DEPRECATED! use 'sysfsgpio srst_num' not 'sysfsgpio_srst_num'
+none separate
+Info : SysfsGPIO JTAG/SWD bitbang driver
+Info : Note: The adapter "sysfsgpio" doesn't support configurable speed
+Info : SWD DPIDR 0x6ba02477
+Info : [stm32h7x.cpu0] Cortex-M7 r1p1 processor detected
+Info : [stm32h7x.cpu0] target has 8 breakpoints, 4 watchpoints
+Info : gdb port disabled
+Info : starting gdb server for stm32h7x.cpu0 on 3333
+Info : Listening on port 3333 for gdb connections
+[stm32h7x.cpu0] halted due to debug-request, current mode: Thread
+xPSR: 0x01000000 pc: 0x08017a6c msp: 0x20020000
+Error: Translation from khz to adapter speed not implemented
+Error executing event reset-init on target stm32h7x.cpu0:
+embedded:startup.tcl:1187: Error:
+in procedure 'program'
+in procedure 'ocd_process_reset'
+in procedure 'ocd_process_reset_inner' called at file "embedded:startup.tcl", line 1187
+** Programming Started **
+Info : Device: STM32H7Ax/7Bx
+Info : flash size probed value 128k
+Info : STM32H7 flash has dual banks
+Info : Bank (0) size is 256 kb, base address is 0x08000000
+Info : Padding image section 0 at 0x08030d9c with 4 bytes (bank write end alignment)
+Warn : Adding extra erase range, 0x08030da0 .. 0x08031fff
+** Programming Finished **
+** Verify Started **
+** Verified OK **
+** Resetting Target **
+shutdown command invoked
+make[1]: Leaving directory '/home/pi/opt/game-and-watch-retro-go-sylverb'
+make[1]: Entering directory '/home/pi/opt/game-and-watch-retro-go-sylverb'
+[ BASH ] Checking for updated roms
+[ BIN ] gw_retro_go_extflash.bin
+scripts/flash_multi.sh build/gw_retro_go_extflash.bin 0
+Preparing chunk 1 / 5 in file /tmp/flash_chunk.frCwN1
+Flashing!
+Open On-Chip Debugger 0.12.0+dev-00150-g91bd43134-dirty (2023-04-14-14:03)
+Licensed under GNU GPL v2
+For bug reports, read
+        http://openocd.org/doc/doxygen/bugs.html
+DEPRECATED! use 'sysfsgpio swd_nums' not 'sysfsgpio_swd_nums'
+DEPRECATED! use 'sysfsgpio srst_num' not 'sysfsgpio_srst_num'
+none separate
+Info : SysfsGPIO JTAG/SWD bitbang driver
+Info : Note: The adapter "sysfsgpio" doesn't support configurable speed
+Info : SWD DPIDR 0x6ba02477
+Info : [stm32h7x.cpu0] Cortex-M7 r1p1 processor detected
+Info : [stm32h7x.cpu0] target has 8 breakpoints, 4 watchpoints
+Info : gdb port disabled
+Info : starting gdb server for stm32h7x.cpu0 on 3333
+Info : Listening on port 3333 for gdb connections
+[stm32h7x.cpu0] halted due to debug-request, current mode: Thread
+xPSR: 0x01000000 pc: 0x080182d4 msp: 0x20020000
+0x20020000
+0x080182d5
+msp (/32): 0x20020000
+pc (/32): 0x080182d5
+Starting flash app
+State: FLASHAPP_INIT
+Ready!
+Loading data
+Open On-Chip Debugger 0.12.0+dev-00150-g91bd43134-dirty (2023-04-14-14:03)
+Licensed under GNU GPL v2
+For bug reports, read
+        http://openocd.org/doc/doxygen/bugs.html
+DEPRECATED! use 'sysfsgpio swd_nums' not 'sysfsgpio_swd_nums'
+DEPRECATED! use 'sysfsgpio srst_num' not 'sysfsgpio_srst_num'
+none separate
+Info : SysfsGPIO JTAG/SWD bitbang driver
+Info : Note: The adapter "sysfsgpio" doesn't support configurable speed
+Info : SWD DPIDR 0x6ba02477
+Info : [stm32h7x.cpu0] Cortex-M7 r1p1 processor detected
+Info : [stm32h7x.cpu0] target has 8 breakpoints, 4 watchpoints
+Info : gdb port disabled
+Info : starting gdb server for stm32h7x.cpu0 on 3333
+Info : Listening on port 3333 for gdb connections
+Warn : [stm32h7x.cpu0] target was in unknown state when halt was requested
+Loading image into RAM
+851968 bytes written at address 0x24025800
+downloaded 851968 bytes in 73.825462s (11.270 KiB/s)
+65 bytes written at address 0x2000088c
+downloaded 65 bytes in 0.006692s (9.485 KiB/s)
+Starting flash process
+Please see the LCD for interactive status.
+State: FLASHAPP_CHECK_HASH_RAM
+State: FLASHAPP_ERASE
+State: FLASHAPP_ERASE
+State: FLASHAPP_ERASE
+State: FLASHAPP_ERASE
+State: FLASHAPP_ERASE
+State: FLASHAPP_ERASE
+State: FLASHAPP_ERASE
+State: FLASHAPP_ERASE
+State: FLASHAPP_ERASE
+State: FLASHAPP_ERASE
+State: FLASHAPP_ERASE
+State: FLASHAPP_ERASE
+State: FLASHAPP_ERASE
+State: FLASHAPP_ERASE
+State: FLASHAPP_PROGRAM
+State: FLASHAPP_CHECK_HASH_FLASH
+Done, more chunks left!
+
+
+Programming of chunk 1 / 5 succeeded.
+
+
+Preparing chunk 2 / 5 in file /tmp/flash_chunk.W2WUCL
+Flashing!
+Ready!
+Loading data
+Open On-Chip Debugger 0.12.0+dev-00150-g91bd43134-dirty (2023-04-14-14:03)
+Licensed under GNU GPL v2
+For bug reports, read
+        http://openocd.org/doc/doxygen/bugs.html
+DEPRECATED! use 'sysfsgpio swd_nums' not 'sysfsgpio_swd_nums'
+DEPRECATED! use 'sysfsgpio srst_num' not 'sysfsgpio_srst_num'
+none separate
+Info : SysfsGPIO JTAG/SWD bitbang driver
+Info : Note: The adapter "sysfsgpio" doesn't support configurable speed
+Info : SWD DPIDR 0x6ba02477
+Info : [stm32h7x.cpu0] Cortex-M7 r1p1 processor detected
+Info : [stm32h7x.cpu0] target has 8 breakpoints, 4 watchpoints
+Info : gdb port disabled
+Info : starting gdb server for stm32h7x.cpu0 on 3333
+Info : Listening on port 3333 for gdb connections
+Warn : [stm32h7x.cpu0] target was in unknown state when halt was requested
+Loading image into RAM
+851968 bytes written at address 0x24025800
+downloaded 851968 bytes in 75.295364s (11.050 KiB/s)
+65 bytes written at address 0x2000088c
+downloaded 65 bytes in 0.006855s (9.260 KiB/s)
+Starting flash process
+Please see the LCD for interactive status.
+State: FLASHAPP_CHECK_HASH_RAM
+State: FLASHAPP_PROGRAM
+Done, more chunks left!
+
+
+Programming of chunk 2 / 5 succeeded.
+
+
+Preparing chunk 3 / 5 in file /tmp/flash_chunk.vPWB5v
+Flashing!
+Ready!
+Loading data
+Open On-Chip Debugger 0.12.0+dev-00150-g91bd43134-dirty (2023-04-14-14:03)
+Licensed under GNU GPL v2
+For bug reports, read
+        http://openocd.org/doc/doxygen/bugs.html
+DEPRECATED! use 'sysfsgpio swd_nums' not 'sysfsgpio_swd_nums'
+DEPRECATED! use 'sysfsgpio srst_num' not 'sysfsgpio_srst_num'
+none separate
+Info : SysfsGPIO JTAG/SWD bitbang driver
+Info : Note: The adapter "sysfsgpio" doesn't support configurable speed
+Info : SWD DPIDR 0x6ba02477
+Info : [stm32h7x.cpu0] Cortex-M7 r1p1 processor detected
+Info : [stm32h7x.cpu0] target has 8 breakpoints, 4 watchpoints
+Info : gdb port disabled
+Info : starting gdb server for stm32h7x.cpu0 on 3333
+Info : Listening on port 3333 for gdb connections
+Warn : [stm32h7x.cpu0] target was in unknown state when halt was requested
+Loading image into RAM
+851968 bytes written at address 0x24025800
+downloaded 851968 bytes in 71.320702s (11.666 KiB/s)
+65 bytes written at address 0x2000088c
+downloaded 65 bytes in 0.006637s (9.564 KiB/s)
+Starting flash process
+Please see the LCD for interactive status.
+State: FLASHAPP_CHECK_HASH_RAM
+State: FLASHAPP_PROGRAM
+Done, more chunks left!
+
+
+Programming of chunk 3 / 5 succeeded.
+
+
+Preparing chunk 4 / 5 in file /tmp/flash_chunk.6LeLH9
+Flashing!
+Ready!
+Loading data
+Open On-Chip Debugger 0.12.0+dev-00150-g91bd43134-dirty (2023-04-14-14:03)
+Licensed under GNU GPL v2
+For bug reports, read
+        http://openocd.org/doc/doxygen/bugs.html
+DEPRECATED! use 'sysfsgpio swd_nums' not 'sysfsgpio_swd_nums'
+DEPRECATED! use 'sysfsgpio srst_num' not 'sysfsgpio_srst_num'
+none separate
+Info : SysfsGPIO JTAG/SWD bitbang driver
+Info : Note: The adapter "sysfsgpio" doesn't support configurable speed
+Info : SWD DPIDR 0x6ba02477
+Info : [stm32h7x.cpu0] Cortex-M7 r1p1 processor detected
+Info : [stm32h7x.cpu0] target has 8 breakpoints, 4 watchpoints
+Info : gdb port disabled
+Info : starting gdb server for stm32h7x.cpu0 on 3333
+Info : Listening on port 3333 for gdb connections
+Warn : [stm32h7x.cpu0] target was in unknown state when halt was requested
+Loading image into RAM
+851968 bytes written at address 0x24025800
+downloaded 851968 bytes in 71.229652s (11.681 KiB/s)
+65 bytes written at address 0x2000088c
+downloaded 65 bytes in 0.006650s (9.545 KiB/s)
+Starting flash process
+Please see the LCD for interactive status.
+State: FLASHAPP_CHECK_HASH_RAM
+State: FLASHAPP_PROGRAM
+Done, more chunks left!
+
+
+Programming of chunk 4 / 5 succeeded.
+
+
+Preparing chunk 5 / 5 in file /tmp/flash_chunk.kWErCj
+Flashing!
+Ready!
+Loading data
+Open On-Chip Debugger 0.12.0+dev-00150-g91bd43134-dirty (2023-04-14-14:03)
+Licensed under GNU GPL v2
+For bug reports, read
+        http://openocd.org/doc/doxygen/bugs.html
+DEPRECATED! use 'sysfsgpio swd_nums' not 'sysfsgpio_swd_nums'
+DEPRECATED! use 'sysfsgpio srst_num' not 'sysfsgpio_srst_num'
+none separate
+Info : SysfsGPIO JTAG/SWD bitbang driver
+Info : Note: The adapter "sysfsgpio" doesn't support configurable speed
+Info : SWD DPIDR 0x6ba02477
+Info : [stm32h7x.cpu0] Cortex-M7 r1p1 processor detected
+Info : [stm32h7x.cpu0] target has 8 breakpoints, 4 watchpoints
+Info : gdb port disabled
+Info : starting gdb server for stm32h7x.cpu0 on 3333
+Info : Listening on port 3333 for gdb connections
+Warn : [stm32h7x.cpu0] target was in unknown state when halt was requested
+Loading image into RAM
+148999 bytes written at address 0x24025800
+downloaded 148999 bytes in 12.697613s (11.459 KiB/s)
+65 bytes written at address 0x2000088c
+downloaded 65 bytes in 0.006702s (9.471 KiB/s)
+Starting flash process
+Please see the LCD for interactive status.
+State: FLASHAPP_PROGRAM
+Done!
+
+
+Programming of chunk 5 / 5 succeeded.
+
+
+Programming of the external flash succeeded.
+
+
+make[1]: Leaving directory '/home/pi/opt/game-and-watch-retro-go-sylverb'
+make[1]: warning: jobserver unavailable: using -j1.  Add '+' to parent make rule.
+make[1]: Entering directory '/home/pi/opt/game-and-watch-retro-go-sylverb'
+# Reset the DBGMCU configuration register (DBGMCU_CR)
+Open On-Chip Debugger 0.12.0+dev-00150-g91bd43134-dirty (2023-04-14-14:03)
+Licensed under GNU GPL v2
+For bug reports, read
+        http://openocd.org/doc/doxygen/bugs.html
+DEPRECATED! use 'sysfsgpio swd_nums' not 'sysfsgpio_swd_nums'
+DEPRECATED! use 'sysfsgpio srst_num' not 'sysfsgpio_srst_num'
+none separate
+Info : SysfsGPIO JTAG/SWD bitbang driver
+Info : Note: The adapter "sysfsgpio" doesn't support configurable speed
+Info : SWD DPIDR 0x6ba02477
+Info : [stm32h7x.cpu0] Cortex-M7 r1p1 processor detected
+Info : [stm32h7x.cpu0] target has 8 breakpoints, 4 watchpoints
+Info : gdb port disabled
+Info : starting gdb server for stm32h7x.cpu0 on 3333
+Info : Listening on port 3333 for gdb connections
+[stm32h7x.cpu0] halted due to debug-request, current mode: Thread
+xPSR: 0x01000000 pc: 0x080182d4 msp: 0x20020000
+make[1]: Leaving directory '/home/pi/opt/game-and-watch-retro-go-sylverb'
+```
+
