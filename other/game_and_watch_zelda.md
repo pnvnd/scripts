@@ -300,7 +300,7 @@ Starting in your home directory `~` (or `cd ~`)
     ![screen3](https://user-images.githubusercontent.com/65086728/233509665-56b40973-3c4d-4748-b9ec-b07ce924a9f6.jpeg)
 
 	<details>
-	  <summary>Console Output Summary (Click to expand)</summary>
+	  <summary>Console Output Summary (click to expand)</summary>
    
 		pi@rpi4b-8gb:~/opt/game-and-watch-retro-go $ make -j4 flash
 		Entering 'LCD-Game-Emulator'
@@ -706,7 +706,7 @@ You should have done part 4 before going to this part.  So why would you want to
 9. If you get `Error: Error connecting DP: cannot read IDR` try fixing your connection, or wiggle your cables.  Otherwise, a successful flash has an output that looks like this:
 
 	<details>
-	  <summary>Console Output Summary (Click to expand)</summary>	
+	  <summary>Console Output Summary (click to expand)</summary>	
 
 		Entering 'LCD-Game-Emulator'
 		Entering 'blueMSX-go'
@@ -1001,6 +1001,8 @@ You should have done part 4 before going to this part.  So why would you want to
 # Part 6 - Replace External Memory and Flash
 
 In this example, I'll be upgrading to a 16 MB external flash memory [MX25U12832F](https://www.macronix.com/en-us/flash-memory-solutions/extended-temperature/Pages/spec.aspx?p=MX25U12832F&m=Ext%20Temperature&n=PM2814) (128 Mb).
+![image](https://github.com/pnvnd/scripts/assets/65086728/a037cea6-a821-40e0-95ad-c9f122d4f0cd)
+
 
 1. Unplug the battery, use kapton tape to protect some parts, and use a solder to remove the original 4 MB external flash.
    ![image](https://github.com/pnvnd/scripts/assets/65086728/77e2b157-84fe-4923-add2-93d40989fec2)
@@ -1020,7 +1022,7 @@ In this example, I'll be upgrading to a 16 MB external flash memory [MX25U12832F
    ```
    ![image](https://github.com/pnvnd/scripts/assets/65086728/2481bc22-2f0d-48e0-b559-811178885725)
 
-4  At this point, we're ready to flash the memory.  As usual, we'll set some environment variables, notably the addition of `EXTFLASH_SIZE_MB="16"`.
+4. At this point, we're ready to flash the memory.  As usual, we'll set some environment variables, notably the addition of `EXTFLASH_SIZE_MB="16"`.
    ```bash
    export OPENOCD="/opt/openocd-git/bin/openocd"
    export GCC_PATH="/home/pi/opt/xpack-arm-none-eabi-gcc-12.2.1-1.2/bin/"
@@ -1047,7 +1049,7 @@ In this example, I'll be upgrading to a 16 MB external flash memory [MX25U12832F
 7. Flashing 16 MB took about 30 minutes. There were 18 chunks, and first chunk took the longest. For reference, this is what the console output might look like upon successful flashing:
 
 	<details>
-	  <summary>Console Output Summary (Click to expand)</summary>
+	  <summary>Console Output Summary (click to expand)</summary>
 		
 		Entering 'LCD-Game-Emulator'
 		Entering 'blueMSX-go'
