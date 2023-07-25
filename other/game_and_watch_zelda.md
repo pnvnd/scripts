@@ -296,263 +296,264 @@ Starting in your home directory `~` (or `cd ~`)
     ```
 
 15. If flashing fails, run the command above again, this time, hold the dupont cables in place, as they can get loose and lose contact with the board.
+    Here's an example of the output when flashing is completed successfully (Flashing 4 MB took about 10 minutes).
+    ![screen3](https://user-images.githubusercontent.com/65086728/233509665-56b40973-3c4d-4748-b9ec-b07ce924a9f6.jpeg)
 
-Here's an example of the output when flashing is completed successfully (Flashing 4 MB took about 10 minutes).
-![screen3](https://user-images.githubusercontent.com/65086728/233509665-56b40973-3c4d-4748-b9ec-b07ce924a9f6.jpeg)
+	<details>
+	  <summary>Console Output Summary (Click to expand)</summary>
+   
+		pi@rpi4b-8gb:~/opt/game-and-watch-retro-go $ make -j4 flash
+		Entering 'LCD-Game-Emulator'
+		Entering 'retro-go-stm32'
+		make[1]: Entering directory '/home/pi/opt/game-and-watch-retro-go'
+		[ BASH ] Checking for updated roms
+		[ BIN ] gw_retro_go_intflash.bin
+		/opt/openocd-git/bin/openocd -f scripts/interface_rpi.cfg -c "program build/gw_retro_go_intflash.bin 0x08000000 verify reset exit"
+		Open On-Chip Debugger 0.12.0+dev-00150-g91bd43134-dirty (2023-04-14-14:03)
+		Licensed under GNU GPL v2
+		For bug reports, read
+			http://openocd.org/doc/doxygen/bugs.html
+		DEPRECATED! use 'sysfsgpio swd_nums' not 'sysfsgpio_swd_nums'
+		DEPRECATED! use 'sysfsgpio srst_num' not 'sysfsgpio_srst_num'
+		none separate
+		Info : SysfsGPIO JTAG/SWD bitbang driver
+		Info : Note: The adapter "sysfsgpio" doesn't support configurable speed
+		Info : SWD DPIDR 0x6ba02477
+		Error: [stm32h7x.cpu0] Cortex-M PARTNO 0x0 is unrecognized
+		Warn : target stm32h7x.cpu0 examination failed
+		Info : gdb port disabled
+		Info : starting gdb server for stm32h7x.cpu0 on 3333
+		Info : Listening on port 3333 for gdb connections
+		Info : [stm32h7x.cpu0] Cortex-M7 r1p1 processor detected
+		Info : [stm32h7x.cpu0] target has 0 breakpoints, 0 watchpoints
+		[stm32h7x.cpu0] halted due to debug-request, current mode: Thread 
+		xPSR: 0x01000000 pc: 0x0801ad48 msp: 0x2001b620
+		Error: Translation from khz to adapter speed not implemented
+		Error executing event reset-init on target stm32h7x.cpu0:
+		embedded:startup.tcl:1187: Error: 
+		in procedure 'program' 
+		in procedure 'ocd_process_reset' 
+		in procedure 'ocd_process_reset_inner' called at file "embedded:startup.tcl", line 1187
+		** Programming Started **
+		Info : Device: STM32H7Ax/7Bx
+		Info : flash size probed value 128k
+		Info : STM32H7 flash has dual banks
+		Info : Bank (0) size is 256 kb, base address is 0x08000000
+		Info : Padding image section 0 at 0x0801a424 with 12 bytes (bank write end alignment)
+		Warn : Adding extra erase range, 0x0801a430 .. 0x0801bfff
+		** Programming Finished **
+		** Verify Started **
+		** Verified OK **
+		** Resetting Target **
+		shutdown command invoked
+		make[1]: Leaving directory '/home/pi/opt/game-and-watch-retro-go'
+		make[1]: Entering directory '/home/pi/opt/game-and-watch-retro-go'
+		[ BASH ] Checking for updated roms
+		[ BIN ] gw_retro_go_extflash.bin
+		scripts/flash_multi.sh build/gw_retro_go_extflash.bin 0
+		Preparing chunk 1 / 4 in file /tmp/flash_chunk.hnQHW2
+		Flashing!
+		Open On-Chip Debugger 0.12.0+dev-00150-g91bd43134-dirty (2023-04-14-14:03)
+		Licensed under GNU GPL v2
+		For bug reports, read
+			http://openocd.org/doc/doxygen/bugs.html
+		DEPRECATED! use 'sysfsgpio swd_nums' not 'sysfsgpio_swd_nums'
+		DEPRECATED! use 'sysfsgpio srst_num' not 'sysfsgpio_srst_num'
+		none separate
+		Info : SysfsGPIO JTAG/SWD bitbang driver
+		Info : Note: The adapter "sysfsgpio" doesn't support configurable speed
+		Info : SWD DPIDR 0x6ba02477
+		Info : [stm32h7x.cpu0] Cortex-M7 r1p1 processor detected
+		Info : [stm32h7x.cpu0] target has 8 breakpoints, 4 watchpoints
+		Info : gdb port disabled
+		Info : starting gdb server for stm32h7x.cpu0 on 3333
+		Info : Listening on port 3333 for gdb connections
+		[stm32h7x.cpu0] halted due to debug-request, current mode: Thread 
+		xPSR: 0x01000000 pc: 0x08013c44 msp: 0x20020000
+		0x20020000
+		0x08013c45
+		msp (/32): 0x20020000
+		pc (/32): 0x08013c45
+		Starting flash app
+		State: FLASHAPP_INIT
+		Ready!
+		Loading data
+		Open On-Chip Debugger 0.12.0+dev-00150-g91bd43134-dirty (2023-04-14-14:03)
+		Licensed under GNU GPL v2
+		For bug reports, read
+			http://openocd.org/doc/doxygen/bugs.html
+		DEPRECATED! use 'sysfsgpio swd_nums' not 'sysfsgpio_swd_nums'
+		DEPRECATED! use 'sysfsgpio srst_num' not 'sysfsgpio_srst_num'
+		none separate
+		Info : SysfsGPIO JTAG/SWD bitbang driver
+		Info : Note: The adapter "sysfsgpio" doesn't support configurable speed
+		Info : SWD DPIDR 0x6ba02477
+		Info : [stm32h7x.cpu0] Cortex-M7 r1p1 processor detected
+		Info : [stm32h7x.cpu0] target has 8 breakpoints, 4 watchpoints
+		Info : gdb port disabled
+		Info : starting gdb server for stm32h7x.cpu0 on 3333
+		Info : Listening on port 3333 for gdb connections
+		Warn : [stm32h7x.cpu0] target was in unknown state when halt was requested
+		Loading image into RAM
+		851968 bytes written at address 0x24025800
+		downloaded 851968 bytes in 76.104347s (10.932 KiB/s)
+		65 bytes written at address 0x200014ec
+		downloaded 65 bytes in 0.006856s (9.259 KiB/s)
+		Starting flash process
+		Please see the LCD for interactive status.
+		State: FLASHAPP_CHECK_HASH_RAM
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_PROGRAM
+		State: FLASHAPP_PROGRAM
+		Done, more chunks left!
+		
+		
+		Programming of chunk 1 / 4 succeeded.
+		
+		
+		Preparing chunk 2 / 4 in file /tmp/flash_chunk.vj6bON
+		Flashing!
+		Ready!
+		Loading data
+		Open On-Chip Debugger 0.12.0+dev-00150-g91bd43134-dirty (2023-04-14-14:03)
+		Licensed under GNU GPL v2
+		For bug reports, read
+			http://openocd.org/doc/doxygen/bugs.html
+		DEPRECATED! use 'sysfsgpio swd_nums' not 'sysfsgpio_swd_nums'
+		DEPRECATED! use 'sysfsgpio srst_num' not 'sysfsgpio_srst_num'
+		none separate
+		Info : SysfsGPIO JTAG/SWD bitbang driver
+		Info : Note: The adapter "sysfsgpio" doesn't support configurable speed
+		Info : SWD DPIDR 0x6ba02477
+		Info : [stm32h7x.cpu0] Cortex-M7 r1p1 processor detected
+		Info : [stm32h7x.cpu0] target has 8 breakpoints, 4 watchpoints
+		Info : gdb port disabled
+		Info : starting gdb server for stm32h7x.cpu0 on 3333
+		Info : Listening on port 3333 for gdb connections
+		Warn : [stm32h7x.cpu0] target was in unknown state when halt was requested
+		Loading image into RAM
+		851968 bytes written at address 0x24025800
+		downloaded 851968 bytes in 76.579376s (10.865 KiB/s)
+		65 bytes written at address 0x200014ec
+		downloaded 65 bytes in 0.006882s (9.224 KiB/s)
+		Starting flash process
+		Please see the LCD for interactive status.
+		State: FLASHAPP_CHECK_HASH_RAM
+		State: FLASHAPP_PROGRAM
+		Done, more chunks left!
+		
+		
+		Programming of chunk 2 / 4 succeeded.
+		
+		
+		Preparing chunk 3 / 4 in file /tmp/flash_chunk.nXHnrU
+		Flashing!
+		Ready!
+		Loading data
+		Open On-Chip Debugger 0.12.0+dev-00150-g91bd43134-dirty (2023-04-14-14:03)
+		Licensed under GNU GPL v2
+		For bug reports, read
+			http://openocd.org/doc/doxygen/bugs.html
+		DEPRECATED! use 'sysfsgpio swd_nums' not 'sysfsgpio_swd_nums'
+		DEPRECATED! use 'sysfsgpio srst_num' not 'sysfsgpio_srst_num'
+		none separate
+		Info : SysfsGPIO JTAG/SWD bitbang driver
+		Info : Note: The adapter "sysfsgpio" doesn't support configurable speed
+		Info : SWD DPIDR 0x6ba02477
+		Info : [stm32h7x.cpu0] Cortex-M7 r1p1 processor detected
+		Info : [stm32h7x.cpu0] target has 8 breakpoints, 4 watchpoints
+		Info : gdb port disabled
+		Info : starting gdb server for stm32h7x.cpu0 on 3333
+		Info : Listening on port 3333 for gdb connections
+		Warn : [stm32h7x.cpu0] target was in unknown state when halt was requested
+		Loading image into RAM
+		851968 bytes written at address 0x24025800
+		downloaded 851968 bytes in 77.099930s (10.791 KiB/s)
+		65 bytes written at address 0x200014ec
+		downloaded 65 bytes in 0.006811s (9.320 KiB/s)
+		Starting flash process
+		Please see the LCD for interactive status.
+		State: FLASHAPP_CHECK_HASH_RAM
+		State: FLASHAPP_PROGRAM
+		Done, more chunks left!
+		
+		
+		Programming of chunk 3 / 4 succeeded.
+		
+		
+		Preparing chunk 4 / 4 in file /tmp/flash_chunk.7RIZMZ
+		Flashing!
+		Ready!
+		Loading data
+		Open On-Chip Debugger 0.12.0+dev-00150-g91bd43134-dirty (2023-04-14-14:03)
+		Licensed under GNU GPL v2
+		For bug reports, read
+			http://openocd.org/doc/doxygen/bugs.html
+		DEPRECATED! use 'sysfsgpio swd_nums' not 'sysfsgpio_swd_nums'
+		DEPRECATED! use 'sysfsgpio srst_num' not 'sysfsgpio_srst_num'
+		none separate
+		Info : SysfsGPIO JTAG/SWD bitbang driver
+		Info : Note: The adapter "sysfsgpio" doesn't support configurable speed
+		Info : SWD DPIDR 0x6ba02477
+		Info : [stm32h7x.cpu0] Cortex-M7 r1p1 processor detected
+		Info : [stm32h7x.cpu0] target has 8 breakpoints, 4 watchpoints
+		Info : gdb port disabled
+		Info : starting gdb server for stm32h7x.cpu0 on 3333
+		Info : Listening on port 3333 for gdb connections
+		Warn : [stm32h7x.cpu0] target was in unknown state when halt was requested
+		Loading image into RAM
+		688267 bytes written at address 0x24025800
+		downloaded 688267 bytes in 61.677055s (10.898 KiB/s)
+		65 bytes written at address 0x200014ec
+		downloaded 65 bytes in 0.006940s (9.146 KiB/s)
+		Starting flash process
+		Please see the LCD for interactive status.
+		State: FLASHAPP_CHECK_HASH_RAM
+		State: FLASHAPP_PROGRAM
+		Done!
+		
+		
+		Programming of chunk 4 / 4 succeeded.
+		
+		
+		Programming of the external flash succeeded.
+		
+		
+		make[1]: Leaving directory '/home/pi/opt/game-and-watch-retro-go'
+		make[1]: warning: jobserver unavailable: using -j1.  Add '+' to parent make rule.
+		make[1]: Entering directory '/home/pi/opt/game-and-watch-retro-go'
+		# Reset the DBGMCU configuration register (DBGMCU_CR)
+		Open On-Chip Debugger 0.12.0+dev-00150-g91bd43134-dirty (2023-04-14-14:03)
+		Licensed under GNU GPL v2
+		For bug reports, read
+			http://openocd.org/doc/doxygen/bugs.html
+		DEPRECATED! use 'sysfsgpio swd_nums' not 'sysfsgpio_swd_nums'
+		DEPRECATED! use 'sysfsgpio srst_num' not 'sysfsgpio_srst_num'
+		none separate
+		Info : SysfsGPIO JTAG/SWD bitbang driver
+		Info : Note: The adapter "sysfsgpio" doesn't support configurable speed
+		Info : SWD DPIDR 0x6ba02477
+		Info : [stm32h7x.cpu0] Cortex-M7 r1p1 processor detected
+		Info : [stm32h7x.cpu0] target has 8 breakpoints, 4 watchpoints
+		Info : gdb port disabled
+		Info : starting gdb server for stm32h7x.cpu0 on 3333
+		Info : Listening on port 3333 for gdb connections
+		[stm32h7x.cpu0] halted due to debug-request, current mode: Thread 
+		xPSR: 0x01000000 pc: 0x08013c44 msp: 0x20020000
+		make[1]: Leaving directory '/home/pi/opt/game-and-watch-retro-go'
+	</details>
 
-
-```
-pi@rpi4b-8gb:~/opt/game-and-watch-retro-go $ make -j4 flash
-Entering 'LCD-Game-Emulator'
-Entering 'retro-go-stm32'
-make[1]: Entering directory '/home/pi/opt/game-and-watch-retro-go'
-[ BASH ] Checking for updated roms
-[ BIN ] gw_retro_go_intflash.bin
-/opt/openocd-git/bin/openocd -f scripts/interface_rpi.cfg -c "program build/gw_retro_go_intflash.bin 0x08000000 verify reset exit"
-Open On-Chip Debugger 0.12.0+dev-00150-g91bd43134-dirty (2023-04-14-14:03)
-Licensed under GNU GPL v2
-For bug reports, read
-	http://openocd.org/doc/doxygen/bugs.html
-DEPRECATED! use 'sysfsgpio swd_nums' not 'sysfsgpio_swd_nums'
-DEPRECATED! use 'sysfsgpio srst_num' not 'sysfsgpio_srst_num'
-none separate
-Info : SysfsGPIO JTAG/SWD bitbang driver
-Info : Note: The adapter "sysfsgpio" doesn't support configurable speed
-Info : SWD DPIDR 0x6ba02477
-Error: [stm32h7x.cpu0] Cortex-M PARTNO 0x0 is unrecognized
-Warn : target stm32h7x.cpu0 examination failed
-Info : gdb port disabled
-Info : starting gdb server for stm32h7x.cpu0 on 3333
-Info : Listening on port 3333 for gdb connections
-Info : [stm32h7x.cpu0] Cortex-M7 r1p1 processor detected
-Info : [stm32h7x.cpu0] target has 0 breakpoints, 0 watchpoints
-[stm32h7x.cpu0] halted due to debug-request, current mode: Thread 
-xPSR: 0x01000000 pc: 0x0801ad48 msp: 0x2001b620
-Error: Translation from khz to adapter speed not implemented
-Error executing event reset-init on target stm32h7x.cpu0:
-embedded:startup.tcl:1187: Error: 
-in procedure 'program' 
-in procedure 'ocd_process_reset' 
-in procedure 'ocd_process_reset_inner' called at file "embedded:startup.tcl", line 1187
-** Programming Started **
-Info : Device: STM32H7Ax/7Bx
-Info : flash size probed value 128k
-Info : STM32H7 flash has dual banks
-Info : Bank (0) size is 256 kb, base address is 0x08000000
-Info : Padding image section 0 at 0x0801a424 with 12 bytes (bank write end alignment)
-Warn : Adding extra erase range, 0x0801a430 .. 0x0801bfff
-** Programming Finished **
-** Verify Started **
-** Verified OK **
-** Resetting Target **
-shutdown command invoked
-make[1]: Leaving directory '/home/pi/opt/game-and-watch-retro-go'
-make[1]: Entering directory '/home/pi/opt/game-and-watch-retro-go'
-[ BASH ] Checking for updated roms
-[ BIN ] gw_retro_go_extflash.bin
-scripts/flash_multi.sh build/gw_retro_go_extflash.bin 0
-Preparing chunk 1 / 4 in file /tmp/flash_chunk.hnQHW2
-Flashing!
-Open On-Chip Debugger 0.12.0+dev-00150-g91bd43134-dirty (2023-04-14-14:03)
-Licensed under GNU GPL v2
-For bug reports, read
-	http://openocd.org/doc/doxygen/bugs.html
-DEPRECATED! use 'sysfsgpio swd_nums' not 'sysfsgpio_swd_nums'
-DEPRECATED! use 'sysfsgpio srst_num' not 'sysfsgpio_srst_num'
-none separate
-Info : SysfsGPIO JTAG/SWD bitbang driver
-Info : Note: The adapter "sysfsgpio" doesn't support configurable speed
-Info : SWD DPIDR 0x6ba02477
-Info : [stm32h7x.cpu0] Cortex-M7 r1p1 processor detected
-Info : [stm32h7x.cpu0] target has 8 breakpoints, 4 watchpoints
-Info : gdb port disabled
-Info : starting gdb server for stm32h7x.cpu0 on 3333
-Info : Listening on port 3333 for gdb connections
-[stm32h7x.cpu0] halted due to debug-request, current mode: Thread 
-xPSR: 0x01000000 pc: 0x08013c44 msp: 0x20020000
-0x20020000
-0x08013c45
-msp (/32): 0x20020000
-pc (/32): 0x08013c45
-Starting flash app
-State: FLASHAPP_INIT
-Ready!
-Loading data
-Open On-Chip Debugger 0.12.0+dev-00150-g91bd43134-dirty (2023-04-14-14:03)
-Licensed under GNU GPL v2
-For bug reports, read
-	http://openocd.org/doc/doxygen/bugs.html
-DEPRECATED! use 'sysfsgpio swd_nums' not 'sysfsgpio_swd_nums'
-DEPRECATED! use 'sysfsgpio srst_num' not 'sysfsgpio_srst_num'
-none separate
-Info : SysfsGPIO JTAG/SWD bitbang driver
-Info : Note: The adapter "sysfsgpio" doesn't support configurable speed
-Info : SWD DPIDR 0x6ba02477
-Info : [stm32h7x.cpu0] Cortex-M7 r1p1 processor detected
-Info : [stm32h7x.cpu0] target has 8 breakpoints, 4 watchpoints
-Info : gdb port disabled
-Info : starting gdb server for stm32h7x.cpu0 on 3333
-Info : Listening on port 3333 for gdb connections
-Warn : [stm32h7x.cpu0] target was in unknown state when halt was requested
-Loading image into RAM
-851968 bytes written at address 0x24025800
-downloaded 851968 bytes in 76.104347s (10.932 KiB/s)
-65 bytes written at address 0x200014ec
-downloaded 65 bytes in 0.006856s (9.259 KiB/s)
-Starting flash process
-Please see the LCD for interactive status.
-State: FLASHAPP_CHECK_HASH_RAM
-State: FLASHAPP_ERASE
-State: FLASHAPP_ERASE
-State: FLASHAPP_ERASE
-State: FLASHAPP_ERASE
-State: FLASHAPP_ERASE
-State: FLASHAPP_ERASE
-State: FLASHAPP_ERASE
-State: FLASHAPP_ERASE
-State: FLASHAPP_ERASE
-State: FLASHAPP_ERASE
-State: FLASHAPP_ERASE
-State: FLASHAPP_ERASE
-State: FLASHAPP_PROGRAM
-State: FLASHAPP_PROGRAM
-Done, more chunks left!
-
-
-Programming of chunk 1 / 4 succeeded.
-
-
-Preparing chunk 2 / 4 in file /tmp/flash_chunk.vj6bON
-Flashing!
-Ready!
-Loading data
-Open On-Chip Debugger 0.12.0+dev-00150-g91bd43134-dirty (2023-04-14-14:03)
-Licensed under GNU GPL v2
-For bug reports, read
-	http://openocd.org/doc/doxygen/bugs.html
-DEPRECATED! use 'sysfsgpio swd_nums' not 'sysfsgpio_swd_nums'
-DEPRECATED! use 'sysfsgpio srst_num' not 'sysfsgpio_srst_num'
-none separate
-Info : SysfsGPIO JTAG/SWD bitbang driver
-Info : Note: The adapter "sysfsgpio" doesn't support configurable speed
-Info : SWD DPIDR 0x6ba02477
-Info : [stm32h7x.cpu0] Cortex-M7 r1p1 processor detected
-Info : [stm32h7x.cpu0] target has 8 breakpoints, 4 watchpoints
-Info : gdb port disabled
-Info : starting gdb server for stm32h7x.cpu0 on 3333
-Info : Listening on port 3333 for gdb connections
-Warn : [stm32h7x.cpu0] target was in unknown state when halt was requested
-Loading image into RAM
-851968 bytes written at address 0x24025800
-downloaded 851968 bytes in 76.579376s (10.865 KiB/s)
-65 bytes written at address 0x200014ec
-downloaded 65 bytes in 0.006882s (9.224 KiB/s)
-Starting flash process
-Please see the LCD for interactive status.
-State: FLASHAPP_CHECK_HASH_RAM
-State: FLASHAPP_PROGRAM
-Done, more chunks left!
-
-
-Programming of chunk 2 / 4 succeeded.
-
-
-Preparing chunk 3 / 4 in file /tmp/flash_chunk.nXHnrU
-Flashing!
-Ready!
-Loading data
-Open On-Chip Debugger 0.12.0+dev-00150-g91bd43134-dirty (2023-04-14-14:03)
-Licensed under GNU GPL v2
-For bug reports, read
-	http://openocd.org/doc/doxygen/bugs.html
-DEPRECATED! use 'sysfsgpio swd_nums' not 'sysfsgpio_swd_nums'
-DEPRECATED! use 'sysfsgpio srst_num' not 'sysfsgpio_srst_num'
-none separate
-Info : SysfsGPIO JTAG/SWD bitbang driver
-Info : Note: The adapter "sysfsgpio" doesn't support configurable speed
-Info : SWD DPIDR 0x6ba02477
-Info : [stm32h7x.cpu0] Cortex-M7 r1p1 processor detected
-Info : [stm32h7x.cpu0] target has 8 breakpoints, 4 watchpoints
-Info : gdb port disabled
-Info : starting gdb server for stm32h7x.cpu0 on 3333
-Info : Listening on port 3333 for gdb connections
-Warn : [stm32h7x.cpu0] target was in unknown state when halt was requested
-Loading image into RAM
-851968 bytes written at address 0x24025800
-downloaded 851968 bytes in 77.099930s (10.791 KiB/s)
-65 bytes written at address 0x200014ec
-downloaded 65 bytes in 0.006811s (9.320 KiB/s)
-Starting flash process
-Please see the LCD for interactive status.
-State: FLASHAPP_CHECK_HASH_RAM
-State: FLASHAPP_PROGRAM
-Done, more chunks left!
-
-
-Programming of chunk 3 / 4 succeeded.
-
-
-Preparing chunk 4 / 4 in file /tmp/flash_chunk.7RIZMZ
-Flashing!
-Ready!
-Loading data
-Open On-Chip Debugger 0.12.0+dev-00150-g91bd43134-dirty (2023-04-14-14:03)
-Licensed under GNU GPL v2
-For bug reports, read
-	http://openocd.org/doc/doxygen/bugs.html
-DEPRECATED! use 'sysfsgpio swd_nums' not 'sysfsgpio_swd_nums'
-DEPRECATED! use 'sysfsgpio srst_num' not 'sysfsgpio_srst_num'
-none separate
-Info : SysfsGPIO JTAG/SWD bitbang driver
-Info : Note: The adapter "sysfsgpio" doesn't support configurable speed
-Info : SWD DPIDR 0x6ba02477
-Info : [stm32h7x.cpu0] Cortex-M7 r1p1 processor detected
-Info : [stm32h7x.cpu0] target has 8 breakpoints, 4 watchpoints
-Info : gdb port disabled
-Info : starting gdb server for stm32h7x.cpu0 on 3333
-Info : Listening on port 3333 for gdb connections
-Warn : [stm32h7x.cpu0] target was in unknown state when halt was requested
-Loading image into RAM
-688267 bytes written at address 0x24025800
-downloaded 688267 bytes in 61.677055s (10.898 KiB/s)
-65 bytes written at address 0x200014ec
-downloaded 65 bytes in 0.006940s (9.146 KiB/s)
-Starting flash process
-Please see the LCD for interactive status.
-State: FLASHAPP_CHECK_HASH_RAM
-State: FLASHAPP_PROGRAM
-Done!
-
-
-Programming of chunk 4 / 4 succeeded.
-
-
-Programming of the external flash succeeded.
-
-
-make[1]: Leaving directory '/home/pi/opt/game-and-watch-retro-go'
-make[1]: warning: jobserver unavailable: using -j1.  Add '+' to parent make rule.
-make[1]: Entering directory '/home/pi/opt/game-and-watch-retro-go'
-# Reset the DBGMCU configuration register (DBGMCU_CR)
-Open On-Chip Debugger 0.12.0+dev-00150-g91bd43134-dirty (2023-04-14-14:03)
-Licensed under GNU GPL v2
-For bug reports, read
-	http://openocd.org/doc/doxygen/bugs.html
-DEPRECATED! use 'sysfsgpio swd_nums' not 'sysfsgpio_swd_nums'
-DEPRECATED! use 'sysfsgpio srst_num' not 'sysfsgpio_srst_num'
-none separate
-Info : SysfsGPIO JTAG/SWD bitbang driver
-Info : Note: The adapter "sysfsgpio" doesn't support configurable speed
-Info : SWD DPIDR 0x6ba02477
-Info : [stm32h7x.cpu0] Cortex-M7 r1p1 processor detected
-Info : [stm32h7x.cpu0] target has 8 breakpoints, 4 watchpoints
-Info : gdb port disabled
-Info : starting gdb server for stm32h7x.cpu0 on 3333
-Info : Listening on port 3333 for gdb connections
-[stm32h7x.cpu0] halted due to debug-request, current mode: Thread 
-xPSR: 0x01000000 pc: 0x08013c44 msp: 0x20020000
-make[1]: Leaving directory '/home/pi/opt/game-and-watch-retro-go'
-```
 # Part 4 - Clean Up and Get More Space
 This section will be new for those following the original v1, v2, and v3 guides.  Consider this section as the continuation of the `vendo232` guide.
 
@@ -704,294 +705,1145 @@ You should have done part 4 before going to this part.  So why would you want to
    ```
 9. If you get `Error: Error connecting DP: cannot read IDR` try fixing your connection, or wiggle your cables.  Otherwise, a successful flash has an output that looks like this:
 
-```
-Entering 'LCD-Game-Emulator'
-Entering 'blueMSX-go'
-Entering 'caprice32-go'
-Entering 'fceumm-go'
-Entering 'gwenesis'
-Entering 'potator'
-Entering 'prosystem-go'
-Entering 'retro-go-stm32'
-make[1]: Entering directory '/home/pi/opt/game-and-watch-retro-go-sylverb'
-[ BASH ] Checking for updated roms
-/opt/openocd-git/bin/openocd -f scripts/interface_rpi.cfg -c "program build/gw_retro_go_intflash.bin 0x08000000 verify reset exit"
-Open On-Chip Debugger 0.12.0+dev-00150-g91bd43134-dirty (2023-04-14-14:03)
-Licensed under GNU GPL v2
-For bug reports, read
-        http://openocd.org/doc/doxygen/bugs.html
-DEPRECATED! use 'sysfsgpio swd_nums' not 'sysfsgpio_swd_nums'
-DEPRECATED! use 'sysfsgpio srst_num' not 'sysfsgpio_srst_num'
-none separate
-Info : SysfsGPIO JTAG/SWD bitbang driver
-Info : Note: The adapter "sysfsgpio" doesn't support configurable speed
-Info : SWD DPIDR 0x6ba02477
-Info : [stm32h7x.cpu0] Cortex-M7 r1p1 processor detected
-Info : [stm32h7x.cpu0] target has 8 breakpoints, 4 watchpoints
-Info : gdb port disabled
-Info : starting gdb server for stm32h7x.cpu0 on 3333
-Info : Listening on port 3333 for gdb connections
-[stm32h7x.cpu0] halted due to debug-request, current mode: Thread
-xPSR: 0x01000000 pc: 0x08017a6c msp: 0x20020000
-Error: Translation from khz to adapter speed not implemented
-Error executing event reset-init on target stm32h7x.cpu0:
-embedded:startup.tcl:1187: Error:
-in procedure 'program'
-in procedure 'ocd_process_reset'
-in procedure 'ocd_process_reset_inner' called at file "embedded:startup.tcl", line 1187
-** Programming Started **
-Info : Device: STM32H7Ax/7Bx
-Info : flash size probed value 128k
-Info : STM32H7 flash has dual banks
-Info : Bank (0) size is 256 kb, base address is 0x08000000
-Info : Padding image section 0 at 0x08030d9c with 4 bytes (bank write end alignment)
-Warn : Adding extra erase range, 0x08030da0 .. 0x08031fff
-** Programming Finished **
-** Verify Started **
-** Verified OK **
-** Resetting Target **
-shutdown command invoked
-make[1]: Leaving directory '/home/pi/opt/game-and-watch-retro-go-sylverb'
-make[1]: Entering directory '/home/pi/opt/game-and-watch-retro-go-sylverb'
-[ BASH ] Checking for updated roms
-[ BIN ] gw_retro_go_extflash.bin
-scripts/flash_multi.sh build/gw_retro_go_extflash.bin 0
-Preparing chunk 1 / 5 in file /tmp/flash_chunk.frCwN1
-Flashing!
-Open On-Chip Debugger 0.12.0+dev-00150-g91bd43134-dirty (2023-04-14-14:03)
-Licensed under GNU GPL v2
-For bug reports, read
-        http://openocd.org/doc/doxygen/bugs.html
-DEPRECATED! use 'sysfsgpio swd_nums' not 'sysfsgpio_swd_nums'
-DEPRECATED! use 'sysfsgpio srst_num' not 'sysfsgpio_srst_num'
-none separate
-Info : SysfsGPIO JTAG/SWD bitbang driver
-Info : Note: The adapter "sysfsgpio" doesn't support configurable speed
-Info : SWD DPIDR 0x6ba02477
-Info : [stm32h7x.cpu0] Cortex-M7 r1p1 processor detected
-Info : [stm32h7x.cpu0] target has 8 breakpoints, 4 watchpoints
-Info : gdb port disabled
-Info : starting gdb server for stm32h7x.cpu0 on 3333
-Info : Listening on port 3333 for gdb connections
-[stm32h7x.cpu0] halted due to debug-request, current mode: Thread
-xPSR: 0x01000000 pc: 0x080182d4 msp: 0x20020000
-0x20020000
-0x080182d5
-msp (/32): 0x20020000
-pc (/32): 0x080182d5
-Starting flash app
-State: FLASHAPP_INIT
-Ready!
-Loading data
-Open On-Chip Debugger 0.12.0+dev-00150-g91bd43134-dirty (2023-04-14-14:03)
-Licensed under GNU GPL v2
-For bug reports, read
-        http://openocd.org/doc/doxygen/bugs.html
-DEPRECATED! use 'sysfsgpio swd_nums' not 'sysfsgpio_swd_nums'
-DEPRECATED! use 'sysfsgpio srst_num' not 'sysfsgpio_srst_num'
-none separate
-Info : SysfsGPIO JTAG/SWD bitbang driver
-Info : Note: The adapter "sysfsgpio" doesn't support configurable speed
-Info : SWD DPIDR 0x6ba02477
-Info : [stm32h7x.cpu0] Cortex-M7 r1p1 processor detected
-Info : [stm32h7x.cpu0] target has 8 breakpoints, 4 watchpoints
-Info : gdb port disabled
-Info : starting gdb server for stm32h7x.cpu0 on 3333
-Info : Listening on port 3333 for gdb connections
-Warn : [stm32h7x.cpu0] target was in unknown state when halt was requested
-Loading image into RAM
-851968 bytes written at address 0x24025800
-downloaded 851968 bytes in 73.825462s (11.270 KiB/s)
-65 bytes written at address 0x2000088c
-downloaded 65 bytes in 0.006692s (9.485 KiB/s)
-Starting flash process
-Please see the LCD for interactive status.
-State: FLASHAPP_CHECK_HASH_RAM
-State: FLASHAPP_ERASE
-State: FLASHAPP_ERASE
-State: FLASHAPP_ERASE
-State: FLASHAPP_ERASE
-State: FLASHAPP_ERASE
-State: FLASHAPP_ERASE
-State: FLASHAPP_ERASE
-State: FLASHAPP_ERASE
-State: FLASHAPP_ERASE
-State: FLASHAPP_ERASE
-State: FLASHAPP_ERASE
-State: FLASHAPP_ERASE
-State: FLASHAPP_ERASE
-State: FLASHAPP_ERASE
-State: FLASHAPP_PROGRAM
-State: FLASHAPP_CHECK_HASH_FLASH
-Done, more chunks left!
+	<details>
+	  <summary>Console Output Summary (Click to expand)</summary>	
 
+		Entering 'LCD-Game-Emulator'
+		Entering 'blueMSX-go'
+		Entering 'caprice32-go'
+		Entering 'fceumm-go'
+		Entering 'gwenesis'
+		Entering 'potator'
+		Entering 'prosystem-go'
+		Entering 'retro-go-stm32'
+		make[1]: Entering directory '/home/pi/opt/game-and-watch-retro-go-sylverb'
+		[ BASH ] Checking for updated roms
+		/opt/openocd-git/bin/openocd -f scripts/interface_rpi.cfg -c "program build/gw_retro_go_intflash.bin 0x08000000 verify reset exit"
+		Open On-Chip Debugger 0.12.0+dev-00150-g91bd43134-dirty (2023-04-14-14:03)
+		Licensed under GNU GPL v2
+		For bug reports, read
+		http://openocd.org/doc/doxygen/bugs.html
+		DEPRECATED! use 'sysfsgpio swd_nums' not 'sysfsgpio_swd_nums'
+		DEPRECATED! use 'sysfsgpio srst_num' not 'sysfsgpio_srst_num'
+		none separate
+		Info : SysfsGPIO JTAG/SWD bitbang driver
+		Info : Note: The adapter "sysfsgpio" doesn't support configurable speed
+		Info : SWD DPIDR 0x6ba02477
+		Info : [stm32h7x.cpu0] Cortex-M7 r1p1 processor detected
+		Info : [stm32h7x.cpu0] target has 8 breakpoints, 4 watchpoints
+		Info : gdb port disabled
+		Info : starting gdb server for stm32h7x.cpu0 on 3333
+		Info : Listening on port 3333 for gdb connections
+		[stm32h7x.cpu0] halted due to debug-request, current mode: Thread
+		xPSR: 0x01000000 pc: 0x08017a6c msp: 0x20020000
+		Error: Translation from khz to adapter speed not implemented
+		Error executing event reset-init on target stm32h7x.cpu0:
+		embedded:startup.tcl:1187: Error:
+		in procedure 'program'
+		in procedure 'ocd_process_reset'
+		in procedure 'ocd_process_reset_inner' called at file "embedded:startup.tcl", line 1187
+		** Programming Started **
+		Info : Device: STM32H7Ax/7Bx
+		Info : flash size probed value 128k
+		Info : STM32H7 flash has dual banks
+		Info : Bank (0) size is 256 kb, base address is 0x08000000
+		Info : Padding image section 0 at 0x08030d9c with 4 bytes (bank write end alignment)
+		Warn : Adding extra erase range, 0x08030da0 .. 0x08031fff
+		** Programming Finished **
+		** Verify Started **
+		** Verified OK **
+		** Resetting Target **
+		shutdown command invoked
+		make[1]: Leaving directory '/home/pi/opt/game-and-watch-retro-go-sylverb'
+		make[1]: Entering directory '/home/pi/opt/game-and-watch-retro-go-sylverb'
+		[ BASH ] Checking for updated roms
+		[ BIN ] gw_retro_go_extflash.bin
+		scripts/flash_multi.sh build/gw_retro_go_extflash.bin 0
+		Preparing chunk 1 / 5 in file /tmp/flash_chunk.frCwN1
+		Flashing!
+		Open On-Chip Debugger 0.12.0+dev-00150-g91bd43134-dirty (2023-04-14-14:03)
+		Licensed under GNU GPL v2
+		For bug reports, read
+		http://openocd.org/doc/doxygen/bugs.html
+		DEPRECATED! use 'sysfsgpio swd_nums' not 'sysfsgpio_swd_nums'
+		DEPRECATED! use 'sysfsgpio srst_num' not 'sysfsgpio_srst_num'
+		none separate
+		Info : SysfsGPIO JTAG/SWD bitbang driver
+		Info : Note: The adapter "sysfsgpio" doesn't support configurable speed
+		Info : SWD DPIDR 0x6ba02477
+		Info : [stm32h7x.cpu0] Cortex-M7 r1p1 processor detected
+		Info : [stm32h7x.cpu0] target has 8 breakpoints, 4 watchpoints
+		Info : gdb port disabled
+		Info : starting gdb server for stm32h7x.cpu0 on 3333
+		Info : Listening on port 3333 for gdb connections
+		[stm32h7x.cpu0] halted due to debug-request, current mode: Thread
+		xPSR: 0x01000000 pc: 0x080182d4 msp: 0x20020000
+		0x20020000
+		0x080182d5
+		msp (/32): 0x20020000
+		pc (/32): 0x080182d5
+		Starting flash app
+		State: FLASHAPP_INIT
+		Ready!
+		Loading data
+		Open On-Chip Debugger 0.12.0+dev-00150-g91bd43134-dirty (2023-04-14-14:03)
+		Licensed under GNU GPL v2
+		For bug reports, read
+		http://openocd.org/doc/doxygen/bugs.html
+		DEPRECATED! use 'sysfsgpio swd_nums' not 'sysfsgpio_swd_nums'
+		DEPRECATED! use 'sysfsgpio srst_num' not 'sysfsgpio_srst_num'
+		none separate
+		Info : SysfsGPIO JTAG/SWD bitbang driver
+		Info : Note: The adapter "sysfsgpio" doesn't support configurable speed
+		Info : SWD DPIDR 0x6ba02477
+		Info : [stm32h7x.cpu0] Cortex-M7 r1p1 processor detected
+		Info : [stm32h7x.cpu0] target has 8 breakpoints, 4 watchpoints
+		Info : gdb port disabled
+		Info : starting gdb server for stm32h7x.cpu0 on 3333
+		Info : Listening on port 3333 for gdb connections
+		Warn : [stm32h7x.cpu0] target was in unknown state when halt was requested
+		Loading image into RAM
+		851968 bytes written at address 0x24025800
+		downloaded 851968 bytes in 73.825462s (11.270 KiB/s)
+		65 bytes written at address 0x2000088c
+		downloaded 65 bytes in 0.006692s (9.485 KiB/s)
+		Starting flash process
+		Please see the LCD for interactive status.
+		State: FLASHAPP_CHECK_HASH_RAM
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_PROGRAM
+		State: FLASHAPP_CHECK_HASH_FLASH
+		Done, more chunks left!
+		
+		
+		Programming of chunk 1 / 5 succeeded.
+		
+		
+		Preparing chunk 2 / 5 in file /tmp/flash_chunk.W2WUCL
+		Flashing!
+		Ready!
+		Loading data
+		Open On-Chip Debugger 0.12.0+dev-00150-g91bd43134-dirty (2023-04-14-14:03)
+		Licensed under GNU GPL v2
+		For bug reports, read
+		http://openocd.org/doc/doxygen/bugs.html
+		DEPRECATED! use 'sysfsgpio swd_nums' not 'sysfsgpio_swd_nums'
+		DEPRECATED! use 'sysfsgpio srst_num' not 'sysfsgpio_srst_num'
+		none separate
+		Info : SysfsGPIO JTAG/SWD bitbang driver
+		Info : Note: The adapter "sysfsgpio" doesn't support configurable speed
+		Info : SWD DPIDR 0x6ba02477
+		Info : [stm32h7x.cpu0] Cortex-M7 r1p1 processor detected
+		Info : [stm32h7x.cpu0] target has 8 breakpoints, 4 watchpoints
+		Info : gdb port disabled
+		Info : starting gdb server for stm32h7x.cpu0 on 3333
+		Info : Listening on port 3333 for gdb connections
+		Warn : [stm32h7x.cpu0] target was in unknown state when halt was requested
+		Loading image into RAM
+		851968 bytes written at address 0x24025800
+		downloaded 851968 bytes in 75.295364s (11.050 KiB/s)
+		65 bytes written at address 0x2000088c
+		downloaded 65 bytes in 0.006855s (9.260 KiB/s)
+		Starting flash process
+		Please see the LCD for interactive status.
+		State: FLASHAPP_CHECK_HASH_RAM
+		State: FLASHAPP_PROGRAM
+		Done, more chunks left!
+		
+		
+		Programming of chunk 2 / 5 succeeded.
+		
+		
+		Preparing chunk 3 / 5 in file /tmp/flash_chunk.vPWB5v
+		Flashing!
+		Ready!
+		Loading data
+		Open On-Chip Debugger 0.12.0+dev-00150-g91bd43134-dirty (2023-04-14-14:03)
+		Licensed under GNU GPL v2
+		For bug reports, read
+		http://openocd.org/doc/doxygen/bugs.html
+		DEPRECATED! use 'sysfsgpio swd_nums' not 'sysfsgpio_swd_nums'
+		DEPRECATED! use 'sysfsgpio srst_num' not 'sysfsgpio_srst_num'
+		none separate
+		Info : SysfsGPIO JTAG/SWD bitbang driver
+		Info : Note: The adapter "sysfsgpio" doesn't support configurable speed
+		Info : SWD DPIDR 0x6ba02477
+		Info : [stm32h7x.cpu0] Cortex-M7 r1p1 processor detected
+		Info : [stm32h7x.cpu0] target has 8 breakpoints, 4 watchpoints
+		Info : gdb port disabled
+		Info : starting gdb server for stm32h7x.cpu0 on 3333
+		Info : Listening on port 3333 for gdb connections
+		Warn : [stm32h7x.cpu0] target was in unknown state when halt was requested
+		Loading image into RAM
+		851968 bytes written at address 0x24025800
+		downloaded 851968 bytes in 71.320702s (11.666 KiB/s)
+		65 bytes written at address 0x2000088c
+		downloaded 65 bytes in 0.006637s (9.564 KiB/s)
+		Starting flash process
+		Please see the LCD for interactive status.
+		State: FLASHAPP_CHECK_HASH_RAM
+		State: FLASHAPP_PROGRAM
+		Done, more chunks left!
+		
+		
+		Programming of chunk 3 / 5 succeeded.
+		
+		
+		Preparing chunk 4 / 5 in file /tmp/flash_chunk.6LeLH9
+		Flashing!
+		Ready!
+		Loading data
+		Open On-Chip Debugger 0.12.0+dev-00150-g91bd43134-dirty (2023-04-14-14:03)
+		Licensed under GNU GPL v2
+		For bug reports, read
+		http://openocd.org/doc/doxygen/bugs.html
+		DEPRECATED! use 'sysfsgpio swd_nums' not 'sysfsgpio_swd_nums'
+		DEPRECATED! use 'sysfsgpio srst_num' not 'sysfsgpio_srst_num'
+		none separate
+		Info : SysfsGPIO JTAG/SWD bitbang driver
+		Info : Note: The adapter "sysfsgpio" doesn't support configurable speed
+		Info : SWD DPIDR 0x6ba02477
+		Info : [stm32h7x.cpu0] Cortex-M7 r1p1 processor detected
+		Info : [stm32h7x.cpu0] target has 8 breakpoints, 4 watchpoints
+		Info : gdb port disabled
+		Info : starting gdb server for stm32h7x.cpu0 on 3333
+		Info : Listening on port 3333 for gdb connections
+		Warn : [stm32h7x.cpu0] target was in unknown state when halt was requested
+		Loading image into RAM
+		851968 bytes written at address 0x24025800
+		downloaded 851968 bytes in 71.229652s (11.681 KiB/s)
+		65 bytes written at address 0x2000088c
+		downloaded 65 bytes in 0.006650s (9.545 KiB/s)
+		Starting flash process
+		Please see the LCD for interactive status.
+		State: FLASHAPP_CHECK_HASH_RAM
+		State: FLASHAPP_PROGRAM
+		Done, more chunks left!
+		
+		
+		Programming of chunk 4 / 5 succeeded.
+		
+		
+		Preparing chunk 5 / 5 in file /tmp/flash_chunk.kWErCj
+		Flashing!
+		Ready!
+		Loading data
+		Open On-Chip Debugger 0.12.0+dev-00150-g91bd43134-dirty (2023-04-14-14:03)
+		Licensed under GNU GPL v2
+		For bug reports, read
+		http://openocd.org/doc/doxygen/bugs.html
+		DEPRECATED! use 'sysfsgpio swd_nums' not 'sysfsgpio_swd_nums'
+		DEPRECATED! use 'sysfsgpio srst_num' not 'sysfsgpio_srst_num'
+		none separate
+		Info : SysfsGPIO JTAG/SWD bitbang driver
+		Info : Note: The adapter "sysfsgpio" doesn't support configurable speed
+		Info : SWD DPIDR 0x6ba02477
+		Info : [stm32h7x.cpu0] Cortex-M7 r1p1 processor detected
+		Info : [stm32h7x.cpu0] target has 8 breakpoints, 4 watchpoints
+		Info : gdb port disabled
+		Info : starting gdb server for stm32h7x.cpu0 on 3333
+		Info : Listening on port 3333 for gdb connections
+		Warn : [stm32h7x.cpu0] target was in unknown state when halt was requested
+		Loading image into RAM
+		148999 bytes written at address 0x24025800
+		downloaded 148999 bytes in 12.697613s (11.459 KiB/s)
+		65 bytes written at address 0x2000088c
+		downloaded 65 bytes in 0.006702s (9.471 KiB/s)
+		Starting flash process
+		Please see the LCD for interactive status.
+		State: FLASHAPP_PROGRAM
+		Done!
+		
+		
+		Programming of chunk 5 / 5 succeeded.
+		
+		
+		Programming of the external flash succeeded.
+		
+		
+		make[1]: Leaving directory '/home/pi/opt/game-and-watch-retro-go-sylverb'
+		make[1]: warning: jobserver unavailable: using -j1.  Add '+' to parent make rule.
+		make[1]: Entering directory '/home/pi/opt/game-and-watch-retro-go-sylverb'
+		# Reset the DBGMCU configuration register (DBGMCU_CR)
+		Open On-Chip Debugger 0.12.0+dev-00150-g91bd43134-dirty (2023-04-14-14:03)
+		Licensed under GNU GPL v2
+		For bug reports, read
+		http://openocd.org/doc/doxygen/bugs.html
+		DEPRECATED! use 'sysfsgpio swd_nums' not 'sysfsgpio_swd_nums'
+		DEPRECATED! use 'sysfsgpio srst_num' not 'sysfsgpio_srst_num'
+		none separate
+		Info : SysfsGPIO JTAG/SWD bitbang driver
+		Info : Note: The adapter "sysfsgpio" doesn't support configurable speed
+		Info : SWD DPIDR 0x6ba02477
+		Info : [stm32h7x.cpu0] Cortex-M7 r1p1 processor detected
+		Info : [stm32h7x.cpu0] target has 8 breakpoints, 4 watchpoints
+		Info : gdb port disabled
+		Info : starting gdb server for stm32h7x.cpu0 on 3333
+		Info : Listening on port 3333 for gdb connections
+		[stm32h7x.cpu0] halted due to debug-request, current mode: Thread
+		xPSR: 0x01000000 pc: 0x080182d4 msp: 0x20020000
+		make[1]: Leaving directory '/home/pi/opt/game-and-watch-retro-go-sylverb'
+	</details>
 
-Programming of chunk 1 / 5 succeeded.
+# Part 6 - Replace External Memory and Flash
 
+In this example, I'll be upgrading to a 16 MB external flash memory [MX25U12832F](https://www.macronix.com/en-us/flash-memory-solutions/extended-temperature/Pages/spec.aspx?p=MX25U12832F&m=Ext%20Temperature&n=PM2814) (128 Mb).
 
-Preparing chunk 2 / 5 in file /tmp/flash_chunk.W2WUCL
-Flashing!
-Ready!
-Loading data
-Open On-Chip Debugger 0.12.0+dev-00150-g91bd43134-dirty (2023-04-14-14:03)
-Licensed under GNU GPL v2
-For bug reports, read
-        http://openocd.org/doc/doxygen/bugs.html
-DEPRECATED! use 'sysfsgpio swd_nums' not 'sysfsgpio_swd_nums'
-DEPRECATED! use 'sysfsgpio srst_num' not 'sysfsgpio_srst_num'
-none separate
-Info : SysfsGPIO JTAG/SWD bitbang driver
-Info : Note: The adapter "sysfsgpio" doesn't support configurable speed
-Info : SWD DPIDR 0x6ba02477
-Info : [stm32h7x.cpu0] Cortex-M7 r1p1 processor detected
-Info : [stm32h7x.cpu0] target has 8 breakpoints, 4 watchpoints
-Info : gdb port disabled
-Info : starting gdb server for stm32h7x.cpu0 on 3333
-Info : Listening on port 3333 for gdb connections
-Warn : [stm32h7x.cpu0] target was in unknown state when halt was requested
-Loading image into RAM
-851968 bytes written at address 0x24025800
-downloaded 851968 bytes in 75.295364s (11.050 KiB/s)
-65 bytes written at address 0x2000088c
-downloaded 65 bytes in 0.006855s (9.260 KiB/s)
-Starting flash process
-Please see the LCD for interactive status.
-State: FLASHAPP_CHECK_HASH_RAM
-State: FLASHAPP_PROGRAM
-Done, more chunks left!
+1. Unplug the battery, use kapton tape to protect some parts, and use a solder to remove the original 4 MB external flash.
+   ![image](https://github.com/pnvnd/scripts/assets/65086728/77e2b157-84fe-4923-add2-93d40989fec2)
 
+2. When the external flash memory is removed, or when there is an issue with the soldering, you'll see the following message on the screen.
+   ```
+   FATAL EXCEPTION: Assert Rabbit (99105ba) PC=0x00000000 LR=0x00000000
+   Assertion "!" Can’t communicate with the external flash! Please check the soldering."
+   "Failed: file "Core/Src/gw_flash.c, line 841, function: OSPI_Init
+   ```
+   ![image](https://github.com/pnvnd/scripts/assets/65086728/68ade58f-90aa-4ab4-8faa-6071646f81a9)
 
-Programming of chunk 2 / 5 succeeded.
+3. After soldering on the replacement external flash memory successfully, you should now have a different screen:
+   ```
+   DATA ERROR:
+   It’s seemed you need to programs external flash
+   ```
+   ![image](https://github.com/pnvnd/scripts/assets/65086728/2481bc22-2f0d-48e0-b559-811178885725)
 
+4  At this point, we're ready to flash the memory.  As usual, we'll set some environment variables, notably the addition of `EXTFLASH_SIZE_MB="16"`.
+   ```bash
+   export OPENOCD="/opt/openocd-git/bin/openocd"
+   export GCC_PATH="/home/pi/opt/xpack-arm-none-eabi-gcc-12.2.1-1.2/bin/"
+   export ADAPTER="rpi"
+   export GNW_TARGET="zelda"
+   export COMPRESS="lzma"
+   export INTFLASH_BANK="1"
+   export COVERFLOW="1"
+   export JPG_QUALITY="90"
+   export EXTFLASH_SIZE_MB="16"
+   ```
 
-Preparing chunk 3 / 5 in file /tmp/flash_chunk.vPWB5v
-Flashing!
-Ready!
-Loading data
-Open On-Chip Debugger 0.12.0+dev-00150-g91bd43134-dirty (2023-04-14-14:03)
-Licensed under GNU GPL v2
-For bug reports, read
-        http://openocd.org/doc/doxygen/bugs.html
-DEPRECATED! use 'sysfsgpio swd_nums' not 'sysfsgpio_swd_nums'
-DEPRECATED! use 'sysfsgpio srst_num' not 'sysfsgpio_srst_num'
-none separate
-Info : SysfsGPIO JTAG/SWD bitbang driver
-Info : Note: The adapter "sysfsgpio" doesn't support configurable speed
-Info : SWD DPIDR 0x6ba02477
-Info : [stm32h7x.cpu0] Cortex-M7 r1p1 processor detected
-Info : [stm32h7x.cpu0] target has 8 breakpoints, 4 watchpoints
-Info : gdb port disabled
-Info : starting gdb server for stm32h7x.cpu0 on 3333
-Info : Listening on port 3333 for gdb connections
-Warn : [stm32h7x.cpu0] target was in unknown state when halt was requested
-Loading image into RAM
-851968 bytes written at address 0x24025800
-downloaded 851968 bytes in 71.320702s (11.666 KiB/s)
-65 bytes written at address 0x2000088c
-downloaded 65 bytes in 0.006637s (9.564 KiB/s)
-Starting flash process
-Please see the LCD for interactive status.
-State: FLASHAPP_CHECK_HASH_RAM
-State: FLASHAPP_PROGRAM
-Done, more chunks left!
+5. Do the following commands first to get an idea of how much external memory will be needed.  You may have to remove ROMs and try again to optimize for capacity.
+   ```
+   make clean
+   make -j4 size
+   ```
 
+6. Once the above commands run without error, you're ready to flash the external memory:
+   ```
+   make -j4 flash
+   ```
 
-Programming of chunk 3 / 5 succeeded.
+7. Flashing 16 MB took about 30 minutes. There were 18 chunks, and first chunk took the longest. For reference, this is what the console output might look like upon successful flashing:
 
-
-Preparing chunk 4 / 5 in file /tmp/flash_chunk.6LeLH9
-Flashing!
-Ready!
-Loading data
-Open On-Chip Debugger 0.12.0+dev-00150-g91bd43134-dirty (2023-04-14-14:03)
-Licensed under GNU GPL v2
-For bug reports, read
-        http://openocd.org/doc/doxygen/bugs.html
-DEPRECATED! use 'sysfsgpio swd_nums' not 'sysfsgpio_swd_nums'
-DEPRECATED! use 'sysfsgpio srst_num' not 'sysfsgpio_srst_num'
-none separate
-Info : SysfsGPIO JTAG/SWD bitbang driver
-Info : Note: The adapter "sysfsgpio" doesn't support configurable speed
-Info : SWD DPIDR 0x6ba02477
-Info : [stm32h7x.cpu0] Cortex-M7 r1p1 processor detected
-Info : [stm32h7x.cpu0] target has 8 breakpoints, 4 watchpoints
-Info : gdb port disabled
-Info : starting gdb server for stm32h7x.cpu0 on 3333
-Info : Listening on port 3333 for gdb connections
-Warn : [stm32h7x.cpu0] target was in unknown state when halt was requested
-Loading image into RAM
-851968 bytes written at address 0x24025800
-downloaded 851968 bytes in 71.229652s (11.681 KiB/s)
-65 bytes written at address 0x2000088c
-downloaded 65 bytes in 0.006650s (9.545 KiB/s)
-Starting flash process
-Please see the LCD for interactive status.
-State: FLASHAPP_CHECK_HASH_RAM
-State: FLASHAPP_PROGRAM
-Done, more chunks left!
-
-
-Programming of chunk 4 / 5 succeeded.
-
-
-Preparing chunk 5 / 5 in file /tmp/flash_chunk.kWErCj
-Flashing!
-Ready!
-Loading data
-Open On-Chip Debugger 0.12.0+dev-00150-g91bd43134-dirty (2023-04-14-14:03)
-Licensed under GNU GPL v2
-For bug reports, read
-        http://openocd.org/doc/doxygen/bugs.html
-DEPRECATED! use 'sysfsgpio swd_nums' not 'sysfsgpio_swd_nums'
-DEPRECATED! use 'sysfsgpio srst_num' not 'sysfsgpio_srst_num'
-none separate
-Info : SysfsGPIO JTAG/SWD bitbang driver
-Info : Note: The adapter "sysfsgpio" doesn't support configurable speed
-Info : SWD DPIDR 0x6ba02477
-Info : [stm32h7x.cpu0] Cortex-M7 r1p1 processor detected
-Info : [stm32h7x.cpu0] target has 8 breakpoints, 4 watchpoints
-Info : gdb port disabled
-Info : starting gdb server for stm32h7x.cpu0 on 3333
-Info : Listening on port 3333 for gdb connections
-Warn : [stm32h7x.cpu0] target was in unknown state when halt was requested
-Loading image into RAM
-148999 bytes written at address 0x24025800
-downloaded 148999 bytes in 12.697613s (11.459 KiB/s)
-65 bytes written at address 0x2000088c
-downloaded 65 bytes in 0.006702s (9.471 KiB/s)
-Starting flash process
-Please see the LCD for interactive status.
-State: FLASHAPP_PROGRAM
-Done!
-
-
-Programming of chunk 5 / 5 succeeded.
-
-
-Programming of the external flash succeeded.
-
-
-make[1]: Leaving directory '/home/pi/opt/game-and-watch-retro-go-sylverb'
-make[1]: warning: jobserver unavailable: using -j1.  Add '+' to parent make rule.
-make[1]: Entering directory '/home/pi/opt/game-and-watch-retro-go-sylverb'
-# Reset the DBGMCU configuration register (DBGMCU_CR)
-Open On-Chip Debugger 0.12.0+dev-00150-g91bd43134-dirty (2023-04-14-14:03)
-Licensed under GNU GPL v2
-For bug reports, read
-        http://openocd.org/doc/doxygen/bugs.html
-DEPRECATED! use 'sysfsgpio swd_nums' not 'sysfsgpio_swd_nums'
-DEPRECATED! use 'sysfsgpio srst_num' not 'sysfsgpio_srst_num'
-none separate
-Info : SysfsGPIO JTAG/SWD bitbang driver
-Info : Note: The adapter "sysfsgpio" doesn't support configurable speed
-Info : SWD DPIDR 0x6ba02477
-Info : [stm32h7x.cpu0] Cortex-M7 r1p1 processor detected
-Info : [stm32h7x.cpu0] target has 8 breakpoints, 4 watchpoints
-Info : gdb port disabled
-Info : starting gdb server for stm32h7x.cpu0 on 3333
-Info : Listening on port 3333 for gdb connections
-[stm32h7x.cpu0] halted due to debug-request, current mode: Thread
-xPSR: 0x01000000 pc: 0x080182d4 msp: 0x20020000
-make[1]: Leaving directory '/home/pi/opt/game-and-watch-retro-go-sylverb'
-```
-
+	<details>
+	  <summary>Console Output Summary (Click to expand)</summary>
+		
+		Entering 'LCD-Game-Emulator'
+		Entering 'blueMSX-go'
+		Entering 'caprice32-go'
+		Entering 'fceumm-go'
+		Entering 'gwenesis'
+		Entering 'potator'
+		Entering 'prosystem-go'
+		Entering 'retro-go-stm32'
+		make[1]: Entering directory '/home/pi/opt/game-and-watch-retro-go-sylverb'
+		[ BASH ] Checking for updated roms
+		[ BIN ] gw_retro_go_intflash.bin
+		/opt/openocd-git/bin/openocd -f scripts/interface_rpi.cfg -c "program build/gw_retro_go_intflash.bin 0x08000000 verify reset exit"
+		Open On-Chip Debugger 0.12.0+dev-00150-g91bd43134-dirty (2023-04-14-14:03)
+		Licensed under GNU GPL v2
+		For bug reports, read
+		        http://openocd.org/doc/doxygen/bugs.html
+		DEPRECATED! use 'sysfsgpio swd_nums' not 'sysfsgpio_swd_nums'
+		DEPRECATED! use 'sysfsgpio srst_num' not 'sysfsgpio_srst_num'
+		none separate
+		Info : SysfsGPIO JTAG/SWD bitbang driver
+		Info : Note: The adapter "sysfsgpio" doesn't support configurable speed
+		Info : SWD DPIDR 0x6ba02477
+		Info : [stm32h7x.cpu0] Cortex-M7 r1p1 processor detected
+		Info : [stm32h7x.cpu0] target has 8 breakpoints, 4 watchpoints
+		Info : gdb port disabled
+		Info : starting gdb server for stm32h7x.cpu0 on 3333
+		Info : Listening on port 3333 for gdb connections
+		[stm32h7x.cpu0] halted due to debug-request, current mode: Thread
+		xPSR: 0x01000000 pc: 0x080182d4 msp: 0x20020000
+		Error: Translation from khz to adapter speed not implemented
+		Error executing event reset-init on target stm32h7x.cpu0:
+		embedded:startup.tcl:1187: Error:
+		in procedure 'program'
+		in procedure 'ocd_process_reset'
+		in procedure 'ocd_process_reset_inner' called at file "embedded:startup.tcl", line 1187
+		** Programming Started **
+		Info : Device: STM32H7Ax/7Bx
+		Info : flash size probed value 128k
+		Info : STM32H7 flash has dual banks
+		Info : Bank (0) size is 256 kb, base address is 0x08000000
+		Info : Padding image section 0 at 0x08032dec with 4 bytes (bank write end alignment)
+		Warn : Adding extra erase range, 0x08032df0 .. 0x08033fff
+		** Programming Finished **
+		** Verify Started **
+		** Verified OK **
+		** Resetting Target **
+		shutdown command invoked
+		make[1]: Leaving directory '/home/pi/opt/game-and-watch-retro-go-sylverb'
+		make[1]: Entering directory '/home/pi/opt/game-and-watch-retro-go-sylverb'
+		[ BASH ] Checking for updated roms
+		[ BIN ] gw_retro_go_extflash.bin
+		scripts/flash_multi.sh build/gw_retro_go_extflash.bin 0
+		Preparing chunk 1 / 18 in file /tmp/flash_chunk.wmEHEb
+		Flashing!
+		Open On-Chip Debugger 0.12.0+dev-00150-g91bd43134-dirty (2023-04-14-14:03)
+		Licensed under GNU GPL v2
+		For bug reports, read
+		        http://openocd.org/doc/doxygen/bugs.html
+		DEPRECATED! use 'sysfsgpio swd_nums' not 'sysfsgpio_swd_nums'
+		DEPRECATED! use 'sysfsgpio srst_num' not 'sysfsgpio_srst_num'
+		none separate
+		Info : SysfsGPIO JTAG/SWD bitbang driver
+		Info : Note: The adapter "sysfsgpio" doesn't support configurable speed
+		Info : SWD DPIDR 0x6ba02477
+		Info : [stm32h7x.cpu0] Cortex-M7 r1p1 processor detected
+		Info : [stm32h7x.cpu0] target has 8 breakpoints, 4 watchpoints
+		Info : gdb port disabled
+		Info : starting gdb server for stm32h7x.cpu0 on 3333
+		Info : Listening on port 3333 for gdb connections
+		[stm32h7x.cpu0] halted due to debug-request, current mode: Thread
+		xPSR: 0x01000000 pc: 0x08018424 msp: 0x20020000
+		0x20020000
+		0x08018425
+		msp (/32): 0x20020000
+		pc (/32): 0x08018425
+		Starting flash app
+		State: FLASHAPP_INIT
+		Ready!
+		Loading data
+		Open On-Chip Debugger 0.12.0+dev-00150-g91bd43134-dirty (2023-04-14-14:03)
+		Licensed under GNU GPL v2
+		For bug reports, read
+		        http://openocd.org/doc/doxygen/bugs.html
+		DEPRECATED! use 'sysfsgpio swd_nums' not 'sysfsgpio_swd_nums'
+		DEPRECATED! use 'sysfsgpio srst_num' not 'sysfsgpio_srst_num'
+		none separate
+		Info : SysfsGPIO JTAG/SWD bitbang driver
+		Info : Note: The adapter "sysfsgpio" doesn't support configurable speed
+		Info : SWD DPIDR 0x6ba02477
+		Info : [stm32h7x.cpu0] Cortex-M7 r1p1 processor detected
+		Info : [stm32h7x.cpu0] target has 8 breakpoints, 4 watchpoints
+		Info : gdb port disabled
+		Info : starting gdb server for stm32h7x.cpu0 on 3333
+		Info : Listening on port 3333 for gdb connections
+		Warn : [stm32h7x.cpu0] target was in unknown state when halt was requested
+		Loading image into RAM
+		851968 bytes written at address 0x24025800
+		downloaded 851968 bytes in 73.217903s (11.363 KiB/s)
+		65 bytes written at address 0x2000088c
+		downloaded 65 bytes in 0.006607s (9.607 KiB/s)
+		Starting flash process
+		Please see the LCD for interactive status.
+		State: FLASHAPP_CHECK_HASH_RAM
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_ERASE
+		State: FLASHAPP_PROGRAM
+		Done, more chunks left!
+		
+		
+		Programming of chunk 1 / 18 succeeded.
+		
+		
+		Preparing chunk 2 / 18 in file /tmp/flash_chunk.oVddNj
+		Flashing!
+		Ready!
+		Loading data
+		Open On-Chip Debugger 0.12.0+dev-00150-g91bd43134-dirty (2023-04-14-14:03)
+		Licensed under GNU GPL v2
+		For bug reports, read
+		        http://openocd.org/doc/doxygen/bugs.html
+		DEPRECATED! use 'sysfsgpio swd_nums' not 'sysfsgpio_swd_nums'
+		DEPRECATED! use 'sysfsgpio srst_num' not 'sysfsgpio_srst_num'
+		none separate
+		Info : SysfsGPIO JTAG/SWD bitbang driver
+		Info : Note: The adapter "sysfsgpio" doesn't support configurable speed
+		Info : SWD DPIDR 0x6ba02477
+		Info : [stm32h7x.cpu0] Cortex-M7 r1p1 processor detected
+		Info : [stm32h7x.cpu0] target has 8 breakpoints, 4 watchpoints
+		Info : gdb port disabled
+		Info : starting gdb server for stm32h7x.cpu0 on 3333
+		Info : Listening on port 3333 for gdb connections
+		Warn : [stm32h7x.cpu0] target was in unknown state when halt was requested
+		Loading image into RAM
+		851968 bytes written at address 0x24025800
+		downloaded 851968 bytes in 73.959587s (11.249 KiB/s)
+		65 bytes written at address 0x2000088c
+		downloaded 65 bytes in 0.006622s (9.586 KiB/s)
+		Starting flash process
+		Please see the LCD for interactive status.
+		State: FLASHAPP_CHECK_HASH_RAM
+		State: FLASHAPP_PROGRAM
+		Done, more chunks left!
+		
+		
+		Programming of chunk 2 / 18 succeeded.
+		
+		
+		Preparing chunk 3 / 18 in file /tmp/flash_chunk.Gxm41g
+		Flashing!
+		Ready!
+		Loading data
+		Open On-Chip Debugger 0.12.0+dev-00150-g91bd43134-dirty (2023-04-14-14:03)
+		Licensed under GNU GPL v2
+		For bug reports, read
+		        http://openocd.org/doc/doxygen/bugs.html
+		DEPRECATED! use 'sysfsgpio swd_nums' not 'sysfsgpio_swd_nums'
+		DEPRECATED! use 'sysfsgpio srst_num' not 'sysfsgpio_srst_num'
+		none separate
+		Info : SysfsGPIO JTAG/SWD bitbang driver
+		Info : Note: The adapter "sysfsgpio" doesn't support configurable speed
+		Info : SWD DPIDR 0x6ba02477
+		Info : [stm32h7x.cpu0] Cortex-M7 r1p1 processor detected
+		Info : [stm32h7x.cpu0] target has 8 breakpoints, 4 watchpoints
+		Info : gdb port disabled
+		Info : starting gdb server for stm32h7x.cpu0 on 3333
+		Info : Listening on port 3333 for gdb connections
+		Warn : [stm32h7x.cpu0] target was in unknown state when halt was requested
+		Loading image into RAM
+		851968 bytes written at address 0x24025800
+		downloaded 851968 bytes in 74.914879s (11.106 KiB/s)
+		65 bytes written at address 0x2000088c
+		downloaded 65 bytes in 0.006789s (9.350 KiB/s)
+		Starting flash process
+		Please see the LCD for interactive status.
+		State: FLASHAPP_CHECK_HASH_RAM
+		State: FLASHAPP_PROGRAM
+		Done, more chunks left!
+		
+		
+		Programming of chunk 3 / 18 succeeded.
+		
+		
+		Preparing chunk 4 / 18 in file /tmp/flash_chunk.h2hc0U
+		Flashing!
+		Ready!
+		Loading data
+		Open On-Chip Debugger 0.12.0+dev-00150-g91bd43134-dirty (2023-04-14-14:03)
+		Licensed under GNU GPL v2
+		For bug reports, read
+		        http://openocd.org/doc/doxygen/bugs.html
+		DEPRECATED! use 'sysfsgpio swd_nums' not 'sysfsgpio_swd_nums'
+		DEPRECATED! use 'sysfsgpio srst_num' not 'sysfsgpio_srst_num'
+		none separate
+		Info : SysfsGPIO JTAG/SWD bitbang driver
+		Info : Note: The adapter "sysfsgpio" doesn't support configurable speed
+		Info : SWD DPIDR 0x6ba02477
+		Info : [stm32h7x.cpu0] Cortex-M7 r1p1 processor detected
+		Info : [stm32h7x.cpu0] target has 8 breakpoints, 4 watchpoints
+		Info : gdb port disabled
+		Info : starting gdb server for stm32h7x.cpu0 on 3333
+		Info : Listening on port 3333 for gdb connections
+		Warn : [stm32h7x.cpu0] target was in unknown state when halt was requested
+		Loading image into RAM
+		851968 bytes written at address 0x24025800
+		downloaded 851968 bytes in 74.590050s (11.154 KiB/s)
+		65 bytes written at address 0x2000088c
+		downloaded 65 bytes in 0.006763s (9.386 KiB/s)
+		Starting flash process
+		Please see the LCD for interactive status.
+		State: FLASHAPP_CHECK_HASH_RAM
+		State: FLASHAPP_PROGRAM
+		Done, more chunks left!
+		
+		
+		Programming of chunk 4 / 18 succeeded.
+		
+		
+		Preparing chunk 5 / 18 in file /tmp/flash_chunk.gcRuPY
+		Flashing!
+		Ready!
+		Loading data
+		Open On-Chip Debugger 0.12.0+dev-00150-g91bd43134-dirty (2023-04-14-14:03)
+		Licensed under GNU GPL v2
+		For bug reports, read
+		        http://openocd.org/doc/doxygen/bugs.html
+		DEPRECATED! use 'sysfsgpio swd_nums' not 'sysfsgpio_swd_nums'
+		DEPRECATED! use 'sysfsgpio srst_num' not 'sysfsgpio_srst_num'
+		none separate
+		Info : SysfsGPIO JTAG/SWD bitbang driver
+		Info : Note: The adapter "sysfsgpio" doesn't support configurable speed
+		Info : SWD DPIDR 0x6ba02477
+		Info : [stm32h7x.cpu0] Cortex-M7 r1p1 processor detected
+		Info : [stm32h7x.cpu0] target has 8 breakpoints, 4 watchpoints
+		Info : gdb port disabled
+		Info : starting gdb server for stm32h7x.cpu0 on 3333
+		Info : Listening on port 3333 for gdb connections
+		Warn : [stm32h7x.cpu0] target was in unknown state when halt was requested
+		Loading image into RAM
+		851968 bytes written at address 0x24025800
+		downloaded 851968 bytes in 75.656586s (10.997 KiB/s)
+		65 bytes written at address 0x2000088c
+		downloaded 65 bytes in 0.006796s (9.340 KiB/s)
+		Starting flash process
+		Please see the LCD for interactive status.
+		State: FLASHAPP_CHECK_HASH_RAM
+		State: FLASHAPP_PROGRAM
+		Done, more chunks left!
+		
+		
+		Programming of chunk 5 / 18 succeeded.
+		
+		
+		Preparing chunk 6 / 18 in file /tmp/flash_chunk.OlA7Bg
+		Flashing!
+		Ready!
+		Loading data
+		Open On-Chip Debugger 0.12.0+dev-00150-g91bd43134-dirty (2023-04-14-14:03)
+		Licensed under GNU GPL v2
+		For bug reports, read
+		        http://openocd.org/doc/doxygen/bugs.html
+		DEPRECATED! use 'sysfsgpio swd_nums' not 'sysfsgpio_swd_nums'
+		DEPRECATED! use 'sysfsgpio srst_num' not 'sysfsgpio_srst_num'
+		none separate
+		Info : SysfsGPIO JTAG/SWD bitbang driver
+		Info : Note: The adapter "sysfsgpio" doesn't support configurable speed
+		Info : SWD DPIDR 0x6ba02477
+		Info : [stm32h7x.cpu0] Cortex-M7 r1p1 processor detected
+		Info : [stm32h7x.cpu0] target has 8 breakpoints, 4 watchpoints
+		Info : gdb port disabled
+		Info : starting gdb server for stm32h7x.cpu0 on 3333
+		Info : Listening on port 3333 for gdb connections
+		Warn : [stm32h7x.cpu0] target was in unknown state when halt was requested
+		Loading image into RAM
+		851968 bytes written at address 0x24025800
+		downloaded 851968 bytes in 73.542824s (11.313 KiB/s)
+		65 bytes written at address 0x2000088c
+		downloaded 65 bytes in 0.006653s (9.541 KiB/s)
+		Starting flash process
+		Please see the LCD for interactive status.
+		State: FLASHAPP_CHECK_HASH_RAM
+		State: FLASHAPP_PROGRAM
+		Done, more chunks left!
+		
+		
+		Programming of chunk 6 / 18 succeeded.
+		
+		
+		Preparing chunk 7 / 18 in file /tmp/flash_chunk.xmNQcE
+		Flashing!
+		Ready!
+		Loading data
+		Open On-Chip Debugger 0.12.0+dev-00150-g91bd43134-dirty (2023-04-14-14:03)
+		Licensed under GNU GPL v2
+		For bug reports, read
+		        http://openocd.org/doc/doxygen/bugs.html
+		DEPRECATED! use 'sysfsgpio swd_nums' not 'sysfsgpio_swd_nums'
+		DEPRECATED! use 'sysfsgpio srst_num' not 'sysfsgpio_srst_num'
+		none separate
+		Info : SysfsGPIO JTAG/SWD bitbang driver
+		Info : Note: The adapter "sysfsgpio" doesn't support configurable speed
+		Info : SWD DPIDR 0x6ba02477
+		Info : [stm32h7x.cpu0] Cortex-M7 r1p1 processor detected
+		Info : [stm32h7x.cpu0] target has 8 breakpoints, 4 watchpoints
+		Info : gdb port disabled
+		Info : starting gdb server for stm32h7x.cpu0 on 3333
+		Info : Listening on port 3333 for gdb connections
+		Warn : [stm32h7x.cpu0] target was in unknown state when halt was requested
+		Loading image into RAM
+		851968 bytes written at address 0x24025800
+		downloaded 851968 bytes in 74.822762s (11.120 KiB/s)
+		65 bytes written at address 0x2000088c
+		downloaded 65 bytes in 0.006704s (9.468 KiB/s)
+		Starting flash process
+		Please see the LCD for interactive status.
+		State: FLASHAPP_CHECK_HASH_RAM
+		State: FLASHAPP_PROGRAM
+		Done, more chunks left!
+		
+		
+		Programming of chunk 7 / 18 succeeded.
+		
+		
+		Preparing chunk 8 / 18 in file /tmp/flash_chunk.XoHxBW
+		Flashing!
+		Ready!
+		Loading data
+		Open On-Chip Debugger 0.12.0+dev-00150-g91bd43134-dirty (2023-04-14-14:03)
+		Licensed under GNU GPL v2
+		For bug reports, read
+		        http://openocd.org/doc/doxygen/bugs.html
+		DEPRECATED! use 'sysfsgpio swd_nums' not 'sysfsgpio_swd_nums'
+		DEPRECATED! use 'sysfsgpio srst_num' not 'sysfsgpio_srst_num'
+		none separate
+		Info : SysfsGPIO JTAG/SWD bitbang driver
+		Info : Note: The adapter "sysfsgpio" doesn't support configurable speed
+		Info : SWD DPIDR 0x6ba02477
+		Info : [stm32h7x.cpu0] Cortex-M7 r1p1 processor detected
+		Info : [stm32h7x.cpu0] target has 8 breakpoints, 4 watchpoints
+		Info : gdb port disabled
+		Info : starting gdb server for stm32h7x.cpu0 on 3333
+		Info : Listening on port 3333 for gdb connections
+		Warn : [stm32h7x.cpu0] target was in unknown state when halt was requested
+		Loading image into RAM
+		851968 bytes written at address 0x24025800
+		downloaded 851968 bytes in 72.204865s (11.523 KiB/s)
+		65 bytes written at address 0x2000088c
+		downloaded 65 bytes in 0.006668s (9.520 KiB/s)
+		Starting flash process
+		Please see the LCD for interactive status.
+		State: FLASHAPP_CHECK_HASH_RAM
+		State: FLASHAPP_PROGRAM
+		Done, more chunks left!
+		
+		
+		Programming of chunk 8 / 18 succeeded.
+		
+		
+		Preparing chunk 9 / 18 in file /tmp/flash_chunk.aNIJxV
+		Flashing!
+		Ready!
+		Loading data
+		Open On-Chip Debugger 0.12.0+dev-00150-g91bd43134-dirty (2023-04-14-14:03)
+		Licensed under GNU GPL v2
+		For bug reports, read
+		        http://openocd.org/doc/doxygen/bugs.html
+		DEPRECATED! use 'sysfsgpio swd_nums' not 'sysfsgpio_swd_nums'
+		DEPRECATED! use 'sysfsgpio srst_num' not 'sysfsgpio_srst_num'
+		none separate
+		Info : SysfsGPIO JTAG/SWD bitbang driver
+		Info : Note: The adapter "sysfsgpio" doesn't support configurable speed
+		Info : SWD DPIDR 0x6ba02477
+		Info : [stm32h7x.cpu0] Cortex-M7 r1p1 processor detected
+		Info : [stm32h7x.cpu0] target has 8 breakpoints, 4 watchpoints
+		Info : gdb port disabled
+		Info : starting gdb server for stm32h7x.cpu0 on 3333
+		Info : Listening on port 3333 for gdb connections
+		Warn : [stm32h7x.cpu0] target was in unknown state when halt was requested
+		Loading image into RAM
+		851968 bytes written at address 0x24025800
+		downloaded 851968 bytes in 71.398155s (11.653 KiB/s)
+		65 bytes written at address 0x2000088c
+		downloaded 65 bytes in 0.006742s (9.415 KiB/s)
+		Starting flash process
+		Please see the LCD for interactive status.
+		State: FLASHAPP_CHECK_HASH_RAM
+		State: FLASHAPP_PROGRAM
+		Done, more chunks left!
+		
+		
+		Programming of chunk 9 / 18 succeeded.
+		
+		
+		Preparing chunk 10 / 18 in file /tmp/flash_chunk.quNsbE
+		Flashing!
+		Ready!
+		Loading data
+		Open On-Chip Debugger 0.12.0+dev-00150-g91bd43134-dirty (2023-04-14-14:03)
+		Licensed under GNU GPL v2
+		For bug reports, read
+		        http://openocd.org/doc/doxygen/bugs.html
+		DEPRECATED! use 'sysfsgpio swd_nums' not 'sysfsgpio_swd_nums'
+		DEPRECATED! use 'sysfsgpio srst_num' not 'sysfsgpio_srst_num'
+		none separate
+		Info : SysfsGPIO JTAG/SWD bitbang driver
+		Info : Note: The adapter "sysfsgpio" doesn't support configurable speed
+		Info : SWD DPIDR 0x6ba02477
+		Info : [stm32h7x.cpu0] Cortex-M7 r1p1 processor detected
+		Info : [stm32h7x.cpu0] target has 8 breakpoints, 4 watchpoints
+		Info : gdb port disabled
+		Info : starting gdb server for stm32h7x.cpu0 on 3333
+		Info : Listening on port 3333 for gdb connections
+		Warn : [stm32h7x.cpu0] target was in unknown state when halt was requested
+		Loading image into RAM
+		851968 bytes written at address 0x24025800
+		downloaded 851968 bytes in 73.617271s (11.302 KiB/s)
+		65 bytes written at address 0x2000088c
+		downloaded 65 bytes in 0.006841s (9.279 KiB/s)
+		Starting flash process
+		Please see the LCD for interactive status.
+		State: FLASHAPP_CHECK_HASH_RAM
+		State: FLASHAPP_PROGRAM
+		State: FLASHAPP_CHECK_HASH_FLASH
+		Done, more chunks left!
+		
+		
+		Programming of chunk 10 / 18 succeeded.
+		
+		
+		Preparing chunk 11 / 18 in file /tmp/flash_chunk.xQu25s
+		Flashing!
+		Ready!
+		Loading data
+		Open On-Chip Debugger 0.12.0+dev-00150-g91bd43134-dirty (2023-04-14-14:03)
+		Licensed under GNU GPL v2
+		For bug reports, read
+		        http://openocd.org/doc/doxygen/bugs.html
+		DEPRECATED! use 'sysfsgpio swd_nums' not 'sysfsgpio_swd_nums'
+		DEPRECATED! use 'sysfsgpio srst_num' not 'sysfsgpio_srst_num'
+		none separate
+		Info : SysfsGPIO JTAG/SWD bitbang driver
+		Info : Note: The adapter "sysfsgpio" doesn't support configurable speed
+		Info : SWD DPIDR 0x6ba02477
+		Info : [stm32h7x.cpu0] Cortex-M7 r1p1 processor detected
+		Info : [stm32h7x.cpu0] target has 8 breakpoints, 4 watchpoints
+		Info : gdb port disabled
+		Info : starting gdb server for stm32h7x.cpu0 on 3333
+		Info : Listening on port 3333 for gdb connections
+		Warn : [stm32h7x.cpu0] target was in unknown state when halt was requested
+		Loading image into RAM
+		851968 bytes written at address 0x24025800
+		downloaded 851968 bytes in 72.257462s (11.514 KiB/s)
+		65 bytes written at address 0x2000088c
+		downloaded 65 bytes in 0.006709s (9.461 KiB/s)
+		Starting flash process
+		Please see the LCD for interactive status.
+		State: FLASHAPP_CHECK_HASH_RAM
+		State: FLASHAPP_PROGRAM
+		State: FLASHAPP_CHECK_HASH_FLASH
+		Done, more chunks left!
+		
+		
+		Programming of chunk 11 / 18 succeeded.
+		
+		
+		Preparing chunk 12 / 18 in file /tmp/flash_chunk.Z2pnj7
+		Flashing!
+		Ready!
+		Loading data
+		Open On-Chip Debugger 0.12.0+dev-00150-g91bd43134-dirty (2023-04-14-14:03)
+		Licensed under GNU GPL v2
+		For bug reports, read
+		        http://openocd.org/doc/doxygen/bugs.html
+		DEPRECATED! use 'sysfsgpio swd_nums' not 'sysfsgpio_swd_nums'
+		DEPRECATED! use 'sysfsgpio srst_num' not 'sysfsgpio_srst_num'
+		none separate
+		Info : SysfsGPIO JTAG/SWD bitbang driver
+		Info : Note: The adapter "sysfsgpio" doesn't support configurable speed
+		Info : SWD DPIDR 0x6ba02477
+		Info : [stm32h7x.cpu0] Cortex-M7 r1p1 processor detected
+		Info : [stm32h7x.cpu0] target has 8 breakpoints, 4 watchpoints
+		Info : gdb port disabled
+		Info : starting gdb server for stm32h7x.cpu0 on 3333
+		Info : Listening on port 3333 for gdb connections
+		Warn : [stm32h7x.cpu0] target was in unknown state when halt was requested
+		Loading image into RAM
+		851968 bytes written at address 0x24025800
+		downloaded 851968 bytes in 72.148865s (11.532 KiB/s)
+		65 bytes written at address 0x2000088c
+		downloaded 65 bytes in 0.006746s (9.410 KiB/s)
+		Starting flash process
+		Please see the LCD for interactive status.
+		State: FLASHAPP_CHECK_HASH_RAM
+		State: FLASHAPP_PROGRAM
+		State: FLASHAPP_CHECK_HASH_FLASH
+		Done, more chunks left!
+		
+		
+		Programming of chunk 12 / 18 succeeded.
+		
+		
+		Preparing chunk 13 / 18 in file /tmp/flash_chunk.E3dPlP
+		Flashing!
+		Ready!
+		Loading data
+		Open On-Chip Debugger 0.12.0+dev-00150-g91bd43134-dirty (2023-04-14-14:03)
+		Licensed under GNU GPL v2
+		For bug reports, read
+		        http://openocd.org/doc/doxygen/bugs.html
+		DEPRECATED! use 'sysfsgpio swd_nums' not 'sysfsgpio_swd_nums'
+		DEPRECATED! use 'sysfsgpio srst_num' not 'sysfsgpio_srst_num'
+		none separate
+		Info : SysfsGPIO JTAG/SWD bitbang driver
+		Info : Note: The adapter "sysfsgpio" doesn't support configurable speed
+		Info : SWD DPIDR 0x6ba02477
+		Info : [stm32h7x.cpu0] Cortex-M7 r1p1 processor detected
+		Info : [stm32h7x.cpu0] target has 8 breakpoints, 4 watchpoints
+		Info : gdb port disabled
+		Info : starting gdb server for stm32h7x.cpu0 on 3333
+		Info : Listening on port 3333 for gdb connections
+		Warn : [stm32h7x.cpu0] target was in unknown state when halt was requested
+		Loading image into RAM
+		851968 bytes written at address 0x24025800
+		downloaded 851968 bytes in 72.235619s (11.518 KiB/s)
+		65 bytes written at address 0x2000088c
+		downloaded 65 bytes in 0.006707s (9.464 KiB/s)
+		Starting flash process
+		Please see the LCD for interactive status.
+		State: FLASHAPP_CHECK_HASH_RAM
+		State: FLASHAPP_PROGRAM
+		State: FLASHAPP_CHECK_HASH_FLASH
+		Done, more chunks left!
+		
+		
+		Programming of chunk 13 / 18 succeeded.
+		
+		
+		Preparing chunk 14 / 18 in file /tmp/flash_chunk.mscVCi
+		Flashing!
+		Ready!
+		Loading data
+		Open On-Chip Debugger 0.12.0+dev-00150-g91bd43134-dirty (2023-04-14-14:03)
+		Licensed under GNU GPL v2
+		For bug reports, read
+		        http://openocd.org/doc/doxygen/bugs.html
+		DEPRECATED! use 'sysfsgpio swd_nums' not 'sysfsgpio_swd_nums'
+		DEPRECATED! use 'sysfsgpio srst_num' not 'sysfsgpio_srst_num'
+		none separate
+		Info : SysfsGPIO JTAG/SWD bitbang driver
+		Info : Note: The adapter "sysfsgpio" doesn't support configurable speed
+		Info : SWD DPIDR 0x6ba02477
+		Info : [stm32h7x.cpu0] Cortex-M7 r1p1 processor detected
+		Info : [stm32h7x.cpu0] target has 8 breakpoints, 4 watchpoints
+		Info : gdb port disabled
+		Info : starting gdb server for stm32h7x.cpu0 on 3333
+		Info : Listening on port 3333 for gdb connections
+		Warn : [stm32h7x.cpu0] target was in unknown state when halt was requested
+		Loading image into RAM
+		851968 bytes written at address 0x24025800
+		downloaded 851968 bytes in 72.182114s (11.526 KiB/s)
+		65 bytes written at address 0x2000088c
+		downloaded 65 bytes in 0.006698s (9.477 KiB/s)
+		Starting flash process
+		Please see the LCD for interactive status.
+		State: FLASHAPP_CHECK_HASH_RAM
+		State: FLASHAPP_PROGRAM
+		State: FLASHAPP_CHECK_HASH_FLASH
+		Done, more chunks left!
+		
+		
+		Programming of chunk 14 / 18 succeeded.
+		
+		
+		Preparing chunk 15 / 18 in file /tmp/flash_chunk.qd4VWk
+		Flashing!
+		Ready!
+		Loading data
+		Open On-Chip Debugger 0.12.0+dev-00150-g91bd43134-dirty (2023-04-14-14:03)
+		Licensed under GNU GPL v2
+		For bug reports, read
+		        http://openocd.org/doc/doxygen/bugs.html
+		DEPRECATED! use 'sysfsgpio swd_nums' not 'sysfsgpio_swd_nums'
+		DEPRECATED! use 'sysfsgpio srst_num' not 'sysfsgpio_srst_num'
+		none separate
+		Info : SysfsGPIO JTAG/SWD bitbang driver
+		Info : Note: The adapter "sysfsgpio" doesn't support configurable speed
+		Info : SWD DPIDR 0x6ba02477
+		Info : [stm32h7x.cpu0] Cortex-M7 r1p1 processor detected
+		Info : [stm32h7x.cpu0] target has 8 breakpoints, 4 watchpoints
+		Info : gdb port disabled
+		Info : starting gdb server for stm32h7x.cpu0 on 3333
+		Info : Listening on port 3333 for gdb connections
+		Warn : [stm32h7x.cpu0] target was in unknown state when halt was requested
+		Loading image into RAM
+		851968 bytes written at address 0x24025800
+		downloaded 851968 bytes in 71.661324s (11.610 KiB/s)
+		65 bytes written at address 0x2000088c
+		downloaded 65 bytes in 0.006655s (9.538 KiB/s)
+		Starting flash process
+		Please see the LCD for interactive status.
+		State: FLASHAPP_CHECK_HASH_RAM
+		State: FLASHAPP_PROGRAM
+		State: FLASHAPP_CHECK_HASH_FLASH
+		Done, more chunks left!
+		
+		
+		Programming of chunk 15 / 18 succeeded.
+		
+		
+		Preparing chunk 16 / 18 in file /tmp/flash_chunk.pvimTN
+		Flashing!
+		Ready!
+		Loading data
+		Open On-Chip Debugger 0.12.0+dev-00150-g91bd43134-dirty (2023-04-14-14:03)
+		Licensed under GNU GPL v2
+		For bug reports, read
+		        http://openocd.org/doc/doxygen/bugs.html
+		DEPRECATED! use 'sysfsgpio swd_nums' not 'sysfsgpio_swd_nums'
+		DEPRECATED! use 'sysfsgpio srst_num' not 'sysfsgpio_srst_num'
+		none separate
+		Info : SysfsGPIO JTAG/SWD bitbang driver
+		Info : Note: The adapter "sysfsgpio" doesn't support configurable speed
+		Info : SWD DPIDR 0x6ba02477
+		Info : [stm32h7x.cpu0] Cortex-M7 r1p1 processor detected
+		Info : [stm32h7x.cpu0] target has 8 breakpoints, 4 watchpoints
+		Info : gdb port disabled
+		Info : starting gdb server for stm32h7x.cpu0 on 3333
+		Info : Listening on port 3333 for gdb connections
+		Warn : [stm32h7x.cpu0] target was in unknown state when halt was requested
+		Loading image into RAM
+		851968 bytes written at address 0x24025800
+		downloaded 851968 bytes in 72.384941s (11.494 KiB/s)
+		65 bytes written at address 0x2000088c
+		downloaded 65 bytes in 0.006780s (9.362 KiB/s)
+		Starting flash process
+		Please see the LCD for interactive status.
+		State: FLASHAPP_CHECK_HASH_RAM
+		State: FLASHAPP_PROGRAM
+		Done, more chunks left!
+		
+		
+		Programming of chunk 16 / 18 succeeded.
+		
+		
+		Preparing chunk 17 / 18 in file /tmp/flash_chunk.OThGzx
+		Flashing!
+		Ready!
+		Loading data
+		Open On-Chip Debugger 0.12.0+dev-00150-g91bd43134-dirty (2023-04-14-14:03)
+		Licensed under GNU GPL v2
+		For bug reports, read
+		        http://openocd.org/doc/doxygen/bugs.html
+		DEPRECATED! use 'sysfsgpio swd_nums' not 'sysfsgpio_swd_nums'
+		DEPRECATED! use 'sysfsgpio srst_num' not 'sysfsgpio_srst_num'
+		none separate
+		Info : SysfsGPIO JTAG/SWD bitbang driver
+		Info : Note: The adapter "sysfsgpio" doesn't support configurable speed
+		Info : SWD DPIDR 0x6ba02477
+		Info : [stm32h7x.cpu0] Cortex-M7 r1p1 processor detected
+		Info : [stm32h7x.cpu0] target has 8 breakpoints, 4 watchpoints
+		Info : gdb port disabled
+		Info : starting gdb server for stm32h7x.cpu0 on 3333
+		Info : Listening on port 3333 for gdb connections
+		Warn : [stm32h7x.cpu0] target was in unknown state when halt was requested
+		Loading image into RAM
+		851968 bytes written at address 0x24025800
+		downloaded 851968 bytes in 72.815689s (11.426 KiB/s)
+		65 bytes written at address 0x2000088c
+		downloaded 65 bytes in 0.006673s (9.512 KiB/s)
+		Starting flash process
+		Please see the LCD for interactive status.
+		State: FLASHAPP_CHECK_HASH_RAM
+		State: FLASHAPP_PROGRAM
+		Done, more chunks left!
+		
+		
+		Programming of chunk 17 / 18 succeeded.
+		
+		
+		Preparing chunk 18 / 18 in file /tmp/flash_chunk.NnVHQ0
+		Flashing!
+		Ready!
+		Loading data
+		Open On-Chip Debugger 0.12.0+dev-00150-g91bd43134-dirty (2023-04-14-14:03)
+		Licensed under GNU GPL v2
+		For bug reports, read
+		        http://openocd.org/doc/doxygen/bugs.html
+		DEPRECATED! use 'sysfsgpio swd_nums' not 'sysfsgpio_swd_nums'
+		DEPRECATED! use 'sysfsgpio srst_num' not 'sysfsgpio_srst_num'
+		none separate
+		Info : SysfsGPIO JTAG/SWD bitbang driver
+		Info : Note: The adapter "sysfsgpio" doesn't support configurable speed
+		Info : SWD DPIDR 0x6ba02477
+		Info : [stm32h7x.cpu0] Cortex-M7 r1p1 processor detected
+		Info : [stm32h7x.cpu0] target has 8 breakpoints, 4 watchpoints
+		Info : gdb port disabled
+		Info : starting gdb server for stm32h7x.cpu0 on 3333
+		Info : Listening on port 3333 for gdb connections
+		Warn : [stm32h7x.cpu0] target was in unknown state when halt was requested
+		Loading image into RAM
+		484059 bytes written at address 0x24025800
+		downloaded 484059 bytes in 41.274136s (11.453 KiB/s)
+		65 bytes written at address 0x2000088c
+		downloaded 65 bytes in 0.006667s (9.521 KiB/s)
+		Starting flash process
+		Please see the LCD for interactive status.
+		State: FLASHAPP_CHECK_HASH_RAM
+		State: FLASHAPP_PROGRAM
+		Done!
+		
+		
+		Programming of chunk 18 / 18 succeeded.
+		
+		
+		Programming of the external flash succeeded.
+		
+		
+		make[1]: Leaving directory '/home/pi/opt/game-and-watch-retro-go-sylverb'
+		make[1]: warning: jobserver unavailable: using -j1.  Add '+' to parent make rule.
+		make[1]: Entering directory '/home/pi/opt/game-and-watch-retro-go-sylverb'
+		# Reset the DBGMCU configuration register (DBGMCU_CR)
+		Open On-Chip Debugger 0.12.0+dev-00150-g91bd43134-dirty (2023-04-14-14:03)
+		Licensed under GNU GPL v2
+		For bug reports, read
+		        http://openocd.org/doc/doxygen/bugs.html
+		DEPRECATED! use 'sysfsgpio swd_nums' not 'sysfsgpio_swd_nums'
+		DEPRECATED! use 'sysfsgpio srst_num' not 'sysfsgpio_srst_num'
+		none separate
+		Info : SysfsGPIO JTAG/SWD bitbang driver
+		Info : Note: The adapter "sysfsgpio" doesn't support configurable speed
+		Info : SWD DPIDR 0x6ba02477
+		Info : [stm32h7x.cpu0] Cortex-M7 r1p1 processor detected
+		Info : [stm32h7x.cpu0] target has 8 breakpoints, 4 watchpoints
+		Info : gdb port disabled
+		Info : starting gdb server for stm32h7x.cpu0 on 3333
+		Info : Listening on port 3333 for gdb connections
+		[stm32h7x.cpu0] halted due to debug-request, current mode: Thread
+		xPSR: 0x01000000 pc: 0x08018424 msp: 0x20020000
+		make[1]: Leaving directory '/home/pi/opt/game-and-watch-retro-go-sylverb'
+	</details>
+ 
