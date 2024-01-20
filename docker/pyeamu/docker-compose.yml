@@ -1,0 +1,12 @@
+version: "3"
+
+services:
+  pyeamu:
+    container_name: pyeamu
+    image: ghcr.io/pnvnd/pyeamu:main
+    ports:
+      - "8000:8000"
+    environment:
+      TZ: 'America/Toronto'
+    # Volumes store your data between container upgrades
+    restart: unless-stopped

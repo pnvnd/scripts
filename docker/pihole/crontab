@@ -1,0 +1,2 @@
+# Update on the first of the month
+0 0 1 * * /opt/pihole/pihole_update.sh
