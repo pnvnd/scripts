@@ -670,6 +670,11 @@ You should have done part 4 before going to this part.  So why would you want to
    make clean
    make -j4 size
    ```
+   Note: If you run into issues with the commands above, try this:
+   ```bash
+   pip install Pillow==9.1.0
+   ```
+   
 7. During the process above, the `PNG` files will be coverted to `IMG` files to be used for the box art.  As well, if applicable, your roms will be compressed with a `LZMA` extension.  You can kind of gauge how much memory you'll need by adding up the `IMG` and `LZMA`, and add roughly 20% for save states.  This is what it may look like if `make -j4 size` runs successfully:
    ```bash
    External flash usage
