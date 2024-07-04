@@ -122,8 +122,9 @@ Starting in your home directory `~` (or `cd ~`)
     sudo apt-get install binutils-arm-none-eabi python3 libftdi1
     ```
 
-14. Go into the `game-and-watch-backup` directory
+14. Clone the `game-and-watch-backup` repository and go into this directory
     ```bash
+    git clone https://github.com/ghidraninja/game-and-watch-backup
     cd game-and-watch-backup
     ```
 
