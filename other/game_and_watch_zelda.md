@@ -647,9 +647,19 @@ You should have done part 4 before going to this part.  So why would you want to
    git clone https://github.com/n-i-x/gnw-covers
    ```
 
-3. Put your ROMs in the `game-and-watch-retro-go-sylverb/roms` folder as usual. Now we're ready to get the box art.  Note the `chmod +x` will be needed later to allow the script to be executed.
+3. Put your ROMs in the `game-and-watch-retro-go-sylverb/roms` folder as usual. Edit the `make_covers.sh` file to update the path to the repositories cloned above.
    ```bash
    cd ~/opt/gnw-covers
+   sudo nano make_covers.sh
+   ```
+   The changes should be near the top and should look like this:
+   ```
+   roms_dir="/home/pi/opt/game-and-watch/game-and-watch-retro-go-sylverb/roms"
+   covers_dir="/home/pi/opt/game-and-watch/retro-go-covers"
+   ```
+   
+5. Now we're ready to get the box art.  Note the `chmod +x` will be needed later to allow the script to be executed.
+   ```
    sudo chmod +x make_covers.sh
    sudo nano make_covers.sh
    ```
