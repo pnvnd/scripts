@@ -6,8 +6,8 @@
 // @author       Peter Nguyen
 // @match        https://one.newrelic.com/*
 // @grant        none
-// @downloadURL  https://github.com/pnvnd/scripts/refs/heads/master/javascript/newrelic-export.user.js
-// @updateURL    https://github.com/pnvnd/scripts/refs/heads/master/javascript/newrelic-export.user.js
+// @downloadURL  https://github.com/pnvnd/scripts/raw/refs/heads/master/javascript/newrelic-export.user.js
+// @updateURL    https://github.com/pnvnd/scripts/raw/refs/heads/master/javascript/newrelic-export.user.js
 // ==/UserScript==
 
 (function() {
