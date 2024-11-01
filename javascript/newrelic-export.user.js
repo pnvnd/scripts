@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Export New Relic Data
 // @namespace    http://newrelic.com
-// @version      3.3.3
+// @version      3.3.4
 // @description  Send NerdGraph request with cookie and export results to CSV
 // @author       Peter Nguyen
 // @match        https://one.newrelic.com/*
@@ -103,10 +103,6 @@ async function exportDropRules(cookie) {
                             id
                             action
                             source
-                            account {
-                              id
-                              name
-                            }
                           }
                         }
                       }
@@ -131,10 +127,10 @@ async function exportDropRules(cookie) {
             // Process and flatten each rule before adding to allEntities array
             for (const rule of rules) {
                 const flattenedRule = {
-                    "Account ID": rule.account.id,
-                    "Account Name": rule.account.name,
-                    "Creator Email": rule.creator.email,
-                    "Creator Name": rule.creator.name,
+                    "Account ID": account.id,
+                    "Account Name": account.name,
+                    "Creator Email": rule.creator ? rule.creator.email : null,
+                    "Creator Name": rule.creator ? rule.creator.name : null,
                     createdBy: rule.createdBy,
                     createdAt: rule.createdAt,
                     nrql: rule.nrql,
@@ -154,6 +150,86 @@ async function exportDropRules(cookie) {
         downloadCSV(allEntities, 'drop_rules.csv');
     } else {
         console.log('No drop rules found.');
+    }
+}
+
+
+// Function to export metric normalization rules and download the response as CSV
+async function exportMetricNormalizationRules(cookie) {
+    let allEntities = []; // Initialize an array to hold all entities
+    const accounts = await getAccounts(cookie);
+    if (!accounts) {
+        console.log('Failed to retrieve accounts.');
+        return;
+    }
+    for (const account of accounts) {
+        try {
+            const nerdgraphQuery = `
+                {
+                  actor {
+                    account(id: ${account.id}) {
+                      metricNormalization {
+                        metricNormalizationRules {
+                          id
+                          enabled
+                          createdAt
+                          applicationName
+                          applicationGuid
+                          action
+                          evalOrder
+                          notes
+                          replacement
+                          terminateChain
+                          matchExpression
+                        }
+                      }
+                    }
+                  }
+                }
+            `;
+            const response = await fetch(nerdgraphEndpoint, {
+                method: 'POST',
+                headers: {
+                    'content-type': 'application/json; charset=utf-8',
+                    'cookie': cookie,
+                    'newrelic-requesting-services': 'platform'
+                },
+                body: JSON.stringify({
+                    query: nerdgraphQuery
+                })
+            });
+            const data = await response.json();
+            const rules = data.data.actor.account.metricNormalization.metricNormalizationRules;
+
+            // Process and flatten each rule before adding to allEntities array
+            for (const rule of rules) {
+                const flattenedRule = {
+                    "Account ID": account.id,
+                    "Account Name": account.name,
+                    id: rule.id,
+                    enabled: rule.enabled,
+                    createdAt: rule.createdAt,
+                    applicationName: rule.applicationName,
+                    applicationGuid: rule.applicationGuid,
+                    action: rule.action,
+                    evalOrder: rule.evalOrder,
+                    notes: rule.notes,
+                    replacement: rule.replacement,
+                    terminateChain: rule.terminateChain,
+                    matchExpression: rule.matchExpression
+                };
+                allEntities.push(flattenedRule);
+            }
+
+        } catch (err) {
+            console.log('Error fetching metric normalization rules for account ' + account.id + ': ' + err.message);
+        }
+    }
+    // Once all data is collected, download it as CSV
+    if (allEntities.length > 0) {
+        downloadCSV(allEntities, 'metricNormalizationRules.csv');
+    } else {
+        console.log('No metric normalization rules found.');
     }
 }
 
@@ -263,7 +339,7 @@ const exportFunctions = {
     "Export Accounts": exportAccounts,
     "Export Entities": exportEntities,
     "Export Drop Rules": exportDropRules,
-
+    "Export Metric Normalization Rules": exportMetricNormalizationRules,
     // Add other functions mapping here
     // Example: functionName: actualFunction
 };
@@ -401,3 +477,4 @@ function resetExportButton(button) {
 addExportControls();
 
 })();
+
