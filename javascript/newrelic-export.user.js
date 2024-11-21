@@ -334,12 +334,136 @@ async function exportEntities(cookie, tagKey="", domain="APM") {
     }
 }
 
+// Function to make requests using fetch and download the response as CSV
+async function exportSyntheticScripts(cookie) {
+    let allEntities = []; // Initialize an array to hold all entities
+    let nextCursor = null; // Start with a null cursor
+    try {
+        // Step 1: Run the first GraphQL query to get Synthetic Monitor details
+        do {
+            const initialQuery = `
+                {
+                  actor {
+                    entitySearch(queryBuilder: {domain: SYNTH, type: MONITOR}) {
+                      results(cursor: ${nextCursor ? JSON.stringify(nextCursor) : null}) {
+                        entities {
+                          ... on SyntheticMonitorEntityOutline {
+                            accountId
+                            guid
+                            name
+                            monitorType
+                            monitoredUrl
+                            period
+                          }
+                        }
+                        nextCursor
+                      }
+                    }
+                  }
+                }
+            `;
+
+            const initialResponse = await fetch(nerdgraphEndpoint, {
+                method: 'POST',
+                headers: {
+                    'content-type': 'application/json; charset=utf-8',
+                    'cookie': cookie,
+                    'newrelic-requesting-services': 'platform'
+                },
+                body: JSON.stringify({
+                    query: initialQuery
+                })
+            });
+
+            const initialData = await initialResponse.json();
+            const initialResults = initialData.data.actor.entitySearch.results;
+
+            // Process each entity to fetch the script text if monitorType is SCRIPT_BROWSER or SCRIPT_API
+            for (const entity of initialResults.entities) {
+                const accountId = entity.accountId;
+                const monitorGuid = entity.guid;
+
+                if (entity.monitorType === "SCRIPT_BROWSER" || entity.monitorType === "SCRIPT_API") {
+                    // Step 2: Run the second GraphQL query for each accountId and guid
+                    const scriptQuery = `
+                        query exportSyntheticScript($accountId: Int!, $monitorGuid: EntityGuid!) {
+                          actor {
+                            account(id: $accountId) {
+                              synthetics {
+                                script(monitorGuid: $monitorGuid) {
+                                  text
+                                }
+                              }
+                            }
+                          }
+                        }
+                    `;
+
+                    const scriptResponse = await fetch(nerdgraphEndpoint, {
+                        method: 'POST',
+                        headers: {
+                            'content-type': 'application/json; charset=utf-8',
+                            'cookie': cookie,
+                            'newrelic-requesting-services': 'platform'
+                        },
+                        body: JSON.stringify({
+                            query: scriptQuery,
+                            variables: {
+                                accountId: accountId,
+                                monitorGuid: monitorGuid
+                            }
+                        })
+                    });
+
+                    const scriptData = await scriptResponse.json();
+                    const scriptText = scriptData.data.actor.account.synthetics.script?.text || "N/A";
+
+                    // Flatten the entity and script data
+                    const flattenedEntity = {
+                        accountId: accountId,
+                        guid: monitorGuid,
+                        name: entity.name || "N/A",
+                        monitorType: entity.monitorType || "N/A",
+                        monitoredUrl: entity.monitoredUrl || "N/A",
+                        period: entity.period || "N/A",
+                        text: scriptText
+                    };
+                    allEntities.push(flattenedEntity);
+                } else {
+                    // Flatten the entity data with text as "N/A" when monitorType is not SCRIPT_BROWSER or SCRIPT_API
+                    const flattenedEntity = {
+                        accountId: accountId,
+                        guid: monitorGuid,
+                        name: entity.name || "N/A",
+                        monitorType: entity.monitorType || "N/A",
+                        monitoredUrl: entity.monitoredUrl || "N/A",
+                        period: entity.period || "N/A",
+                        text: "N/A"
+                    };
+                    allEntities.push(flattenedEntity);
+                }
+            }
+
+            // Update the cursor for the next iteration
+            nextCursor = initialResults.nextCursor;
+
+        } while (nextCursor);
+
+        // Once all data is collected, download it as CSV
+        downloadCSV(allEntities, 'synthetic_monitors.csv');
+    } catch (err) {
+        console.log('Error: ' + err.message);
+    }
+}
+
+
 // Available functions for exporting data
 const exportFunctions = {
     "Export Accounts": exportAccounts,
     "Export Entities": exportEntities,
     "Export Drop Rules": exportDropRules,
     "Export Metric Normalization Rules": exportMetricNormalizationRules,
+    "Export Synthetic Monitors": exportSyntheticScripts,
     // Add other functions mapping here
     // Example: functionName: actualFunction
 };
@@ -477,4 +601,3 @@ function resetExportButton(button) {
 addExportControls();
 
 })();
-
