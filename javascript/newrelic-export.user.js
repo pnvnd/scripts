@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Export New Relic Data
 // @namespace    http://newrelic.com
-// @version      3.3.4
+// @version      3.6.5
 // @description  Send NerdGraph request with cookie and export results to CSV
 // @author       Peter Nguyen
 // @match        https://one.newrelic.com/*
@@ -336,8 +336,8 @@ async function exportEntities(cookie, tagKey="", domain="APM") {
 
 // Function to make requests using fetch and download the response as CSV
 async function exportSyntheticScripts(cookie) {
-    let allEntities = []; // Initialize an array to hold all entities
-    let nextCursor = null; // Start with a null cursor
+    let allEntities = [];
+    let nextCursor = null;
     try {
         // Step 1: Run the first GraphQL query to get Synthetic Monitor details
         do {
@@ -354,6 +354,12 @@ async function exportSyntheticScripts(cookie) {
                             monitorType
                             monitoredUrl
                             period
+                            monitorSummary {
+                              status
+                            }
+                            account {
+                              name
+                            }
                           }
                         }
                         nextCursor
@@ -381,6 +387,7 @@ async function exportSyntheticScripts(cookie) {
             // Process each entity to fetch the script text if monitorType is SCRIPT_BROWSER or SCRIPT_API
             for (const entity of initialResults.entities) {
                 const accountId = entity.accountId;
+                const accountName = entity.account.name;
                 const monitorGuid = entity.guid;
 
                 if (entity.monitorType === "SCRIPT_BROWSER" || entity.monitorType === "SCRIPT_API") {
@@ -420,24 +427,28 @@ async function exportSyntheticScripts(cookie) {
 
                     // Flatten the entity and script data
                     const flattenedEntity = {
+                        accountName: accountName,
                         accountId: accountId,
                         guid: monitorGuid,
                         name: entity.name || "N/A",
                         monitorType: entity.monitorType || "N/A",
                         monitoredUrl: entity.monitoredUrl || "N/A",
                         period: entity.period || "N/A",
+                        monitorStatus: entity.monitorSummary.status || "N/A",
                         text: scriptText
                     };
                     allEntities.push(flattenedEntity);
                 } else {
                     // Flatten the entity data with text as "N/A" when monitorType is not SCRIPT_BROWSER or SCRIPT_API
                     const flattenedEntity = {
+                        accountName: accountName,
                         accountId: accountId,
                         guid: monitorGuid,
                         name: entity.name || "N/A",
                         monitorType: entity.monitorType || "N/A",
                         monitoredUrl: entity.monitoredUrl || "N/A",
                         period: entity.period || "N/A",
+                        monitorStatus: entity.monitorSummary.status || "N/A",
                         text: "N/A"
                     };
                     allEntities.push(flattenedEntity);
@@ -456,6 +467,212 @@ async function exportSyntheticScripts(cookie) {
     }
 }
 
+async function exportNrqlConditions(cookie) {
+    try {
+        // Use your existing function to get account IDs
+        const accounts = await getAccounts(cookie);
+
+        let allConditions = [];
+
+        for (const account of accounts) {
+            const accountId = account.id;
+            const accountName = account.name;
+            let nextPolicyCursor = null;
+
+            do {
+                const policiesQuery = `
+                    query getPolicies($account_id: Int!, $cursor: String) {
+                      actor {
+                        account(id: $account_id) {
+                          alerts {
+                            policiesSearch(cursor: $cursor) {
+                              policies {
+                                accountId
+                                id
+                                name
+                              }
+                              nextCursor
+                              totalCount
+                            }
+                          }
+                        }
+                      }
+                    }
+                `;
+
+                const policiesResponse = await fetch(nerdgraphEndpoint, {
+                    method: 'POST',
+                    headers: {
+                        'content-type': 'application/json; charset=utf-8',
+                        'cookie': cookie,
+                        'newrelic-requesting-services': 'platform'
+                    },
+                    body: JSON.stringify({
+                        query: policiesQuery,
+                        variables: {
+                            account_id: accountId,
+                            cursor: nextPolicyCursor
+                        }
+                    })
+                });
+
+                const policiesData = await policiesResponse.json();
+                const policies = policiesData.data.actor.account.alerts.policiesSearch.policies;
+                nextPolicyCursor = policiesData.data.actor.account.alerts.policiesSearch.nextCursor;
+
+                for (const policy of policies) {
+                    const policyId = policy.id;
+                    let nextConditionCursor = null;
+                    let conditionsFound = false;
+
+                    do {
+                        const conditionsQuery = `
+                            query getNrqlConditions($account_id: Int!, $policy_id: ID, $cursor: String) {
+                              actor {
+                                account(id: $account_id) {
+                                  alerts {
+                                    nrqlConditionsSearch(searchCriteria: {policyId: $policy_id}, cursor: $cursor) {
+                                      nextCursor
+                                      nrqlConditions {
+                                        enabled
+                                        name
+                                        id
+                                        policyId
+                                        signal {
+                                          aggregationDelay
+                                          aggregationMethod
+                                          aggregationTimer
+                                          aggregationWindow
+                                          evaluationDelay
+                                          fillOption
+                                          fillValue
+                                          slideBy
+                                        }
+                                        runbookUrl
+                                        createdAt
+                                        createdBy {
+                                          name
+                                          email
+                                        }
+                                        entityGuid
+                                        terms {
+                                          operator
+                                          priority
+                                          threshold
+                                          thresholdDuration
+                                          thresholdOccurrences
+                                        }
+                                        description
+                                        nrql {
+                                          query
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                        `;
+
+                        const conditionsResponse = await fetch(nerdgraphEndpoint, {
+                            method: 'POST',
+                            headers: {
+                                'content-type': 'application/json; charset=utf-8',
+                                'cookie': cookie,
+                                'newrelic-requesting-services': 'platform'
+                            },
+                            body: JSON.stringify({
+                                query: conditionsQuery,
+                                variables: {
+                                    account_id: accountId,
+                                    policy_id: policyId,
+                                    cursor: nextConditionCursor
+                                }
+                            })
+                        });
+
+                        const conditionsData = await conditionsResponse.json();
+                        const conditions = conditionsData.data.actor.account.alerts.nrqlConditionsSearch.nrqlConditions;
+                        nextConditionCursor = conditionsData.data.actor.account.alerts.nrqlConditionsSearch.nextCursor;
+
+                        if (conditions.length > 0) {
+                            conditionsFound = true;
+                        }
+
+                        for (const condition of conditions) {
+                            if (condition.terms.some(term => term.priority === "CRITICAL")) {
+                                allConditions.push({
+                                    accountName: accountName,
+                                    accountId: accountId,
+                                    policyName: policy.name,
+                                    policyId: policy.id,
+                                    conditionId: condition.id,
+                                    createdAt: condition.createdAt || "N/A",
+                                    "createdBy.name": condition.createdBy?.name || "N/A",
+                                    "createdBy.email": condition.createdBy?.email || "N/A",
+                                    description: condition.description || "N/A",
+                                    enabled: condition.enabled,
+                                    entityGuid: condition.entityGuid || "N/A",
+                                    "nrql.query": condition.nrql.query || "N/A",
+                                    runbookUrl: condition.runbookUrl || "N/A",
+                                    "signal.aggregationDelay": condition.signal.aggregationDelay || "N/A",
+                                    "signal.aggregationMethod": condition.signal.aggregationMethod || "N/A",
+                                    "signal.aggregationTimer": condition.signal.aggregationTimer || "N/A",
+                                    "signal.aggregationWindow": condition.signal.aggregationWindow || "N/A",
+                                    "signal.evaluationDelay": condition.signal.evaluationDelay || "N/A",
+                                    "signal.fillOption": condition.signal.fillOption || "N/A",
+                                    "signal.fillValue": condition.signal.fillValue || "N/A",
+                                    "signal.slideBy": condition.signal.slideBy || "N/A",
+                                    "terms.operator": condition.terms[0].operator,
+                                    "terms.priority": condition.terms[0].priority,
+                                    "terms.threshold": condition.terms[0].threshold,
+                                    "terms.thresholdDuration": condition.terms[0].thresholdDuration,
+                                    "terms.thresholdOccurrences": condition.terms[0].thresholdOccurrences
+                                });
+                            }
+                        }
+                    } while (nextConditionCursor);
+
+                    if (!conditionsFound) {
+                        allConditions.push({
+                            accountName: accountName,
+                            accountId: accountId,
+                            policyName: policy.name,
+                            policyId: policy.id,
+                            conditionId: "N/A",
+                            createdAt: "N/A",
+                            "createdBy.name": "N/A",
+                            "createdBy.email": "N/A",
+                            description: "N/A",
+                            enabled: "N/A",
+                            entityGuid: "N/A",
+                            "nrql.query": "N/A",
+                            runbookUrl: "N/A",
+                            "signal.aggregationDelay": "N/A",
+                            "signal.aggregationMethod": "N/A",
+                            "signal.aggregationTimer": "N/A",
+                            "signal.aggregationWindow": "N/A",
+                            "signal.evaluationDelay": "N/A",
+                            "signal.fillOption": "N/A",
+                            "signal.fillValue": "N/A",
+                            "signal.slideBy": "N/A",
+                            "terms.operator": "N/A",
+                            "terms.priority": "N/A",
+                            "terms.threshold": "N/A",
+                            "terms.thresholdDuration": "N/A",
+                            "terms.thresholdOccurrences": "N/A"
+                        });
+                    }
+                }
+            } while (nextPolicyCursor);
+        }
+
+        // Convert allConditions to CSV and trigger download
+        downloadCSV(allConditions, 'nrqlAlertConditions.csv');
+    } catch (err) {
+        console.log('Error: ' + err.message);
+    }
+}
 
 // Available functions for exporting data
 const exportFunctions = {
@@ -464,6 +681,7 @@ const exportFunctions = {
     "Export Drop Rules": exportDropRules,
     "Export Metric Normalization Rules": exportMetricNormalizationRules,
     "Export Synthetic Monitors": exportSyntheticScripts,
+    "Export NRQL Alerts": exportNrqlConditions,
     // Add other functions mapping here
     // Example: functionName: actualFunction
 };
