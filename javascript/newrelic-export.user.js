@@ -1,10 +1,11 @@
 // ==UserScript==
 // @name         Export New Relic Data
 // @namespace    http://newrelic.com
-// @version      3.6.5
+// @version      3.7.0
 // @description  Send NerdGraph request with cookie and export results to CSV
 // @author       Peter Nguyen
 // @match        https://one.newrelic.com/*
+// @match        https://one.eu.newrelic.com/*
 // @grant        none
 // @downloadURL  https://github.com/pnvnd/scripts/raw/refs/heads/master/javascript/newrelic-export.user.js
 // @updateURL    https://github.com/pnvnd/scripts/raw/refs/heads/master/javascript/newrelic-export.user.js
@@ -13,8 +14,10 @@
 (function() {
     'use strict';
 
-// Your code here...
-const nerdgraphEndpoint = 'https://one.newrelic.com/graphql';
+// Determine the NerdGraph endpoint based on the current URL
+const nerdgraphEndpoint = window.location.host.includes('one.eu.newrelic.com')
+    ? 'https://one.eu.newrelic.com/graphql'
+    : 'https://one.newrelic.com/graphql';
 
 // Function to get all cookies as a single string
 function getCookies() {
@@ -53,8 +56,23 @@ function downloadCSV(data, filename) {
     document.body.removeChild(a);
 }
 
-// Function to make a request to get accounts
+// Get New Relic accounts
 async function getAccounts(cookie) {
+    const nerdgraphQuery = `
+        {
+          actor {
+          accounts {
+            name
+            id
+          }
+          organization {
+            name
+            id
+          }
+        }
+      }
+    `;
+
     try {
         const response = await fetch(nerdgraphEndpoint, {
             method: 'POST',
@@ -64,18 +82,18 @@ async function getAccounts(cookie) {
                 'newrelic-requesting-services': 'platform'
             },
             body: JSON.stringify({
-                query: '{actor{accounts{name id}organization{name id}}}'
+                query: nerdgraphQuery
             })
         });
-        const data = await response.json();
-        return data.data.actor.accounts;
+        const nerdgraph = await response.json();
+        return nerdgraph.data.actor.accounts;
     } catch (err) {
         console.log('Error: ' + err.message);
         return null;
     }
 }
 
-// Function to make requests using fetch and download the response as CSV
+// Get drop rules
 async function exportDropRules(cookie) {
     let allEntities = []; // Initialize an array to hold all entities
     const accounts = await getAccounts(cookie);
@@ -121,8 +139,8 @@ async function exportDropRules(cookie) {
                     query: nerdgraphQuery
                 })
             });
-            const data = await response.json();
-            const rules = data.data.actor.account.nrqlDropRules.list.rules;
+            const nerdgraph = await response.json();
+            const rules = nerdgraph.data.actor.account.nrqlDropRules.list.rules;
 
             // Process and flatten each rule before adding to allEntities array
             for (const rule of rules) {
@@ -152,7 +170,6 @@ async function exportDropRules(cookie) {
         console.log('No drop rules found.');
     }
 }
-
 
 // Function to export metric normalization rules and download the response as CSV
 async function exportMetricNormalizationRules(cookie) {
@@ -198,8 +215,8 @@ async function exportMetricNormalizationRules(cookie) {
                     query: nerdgraphQuery
                 })
             });
-            const data = await response.json();
-            const rules = data.data.actor.account.metricNormalization.metricNormalizationRules;
+            const nerdgraph = await response.json();
+            const rules = nerdgraph.data.actor.account.metricNormalization.metricNormalizationRules;
 
             // Process and flatten each rule before adding to allEntities array
             for (const rule of rules) {
@@ -296,8 +313,8 @@ async function exportEntities(cookie, tagKey="", domain="APM") {
                 })
             });
 
-            const data = await response.json();
-            const results = data.data.actor.entitySearch.results;
+            const nerdgraph = await response.json();
+            const results = nerdgraph.data.actor.entitySearch.results;
 
             // Process entities before appending them to allEntities array
             results.entities.forEach(entity => {
@@ -682,8 +699,6 @@ const exportFunctions = {
     "Export Metric Normalization Rules": exportMetricNormalizationRules,
     "Export Synthetic Monitors": exportSyntheticScripts,
     "Export NRQL Alerts": exportNrqlConditions,
-    // Add other functions mapping here
-    // Example: functionName: actualFunction
 };
 
 // Function to create and add a dropdown menu and button to the webpage
@@ -698,8 +713,13 @@ function addExportControls() {
         select.appendChild(option);
     }
     // Style for the dropdown menu
+    select.style.fontSize = '13px';
     select.style.padding = '5px';
     select.style.marginRight = '5px';
+    select.style.backgroundColor = '#3A444B';
+    select.style.border = 'none';
+    select.style.color = 'white';
+    select.style.borderRadius = '4px';
 
     // Create the dropdown menu for domains (initially hidden)
     const domainSelect = document.createElement('select');
@@ -713,20 +733,26 @@ function addExportControls() {
         domainSelect.appendChild(option);
     });
     // Style for the domain dropdown menu
+    domainSelect.style.fontSize = '13px';
     domainSelect.style.padding = '5px';
     domainSelect.style.marginRight = '5px';
+    domainSelect.style.backgroundColor = '#3A444B';
+    domainSelect.style.border = 'none';
+    domainSelect.style.color = 'white';
+    domainSelect.style.borderRadius = '4px';
 
     // Create the button
     const button = document.createElement('button');
     button.id = 'exportButton';
     button.textContent = 'Export Data';
+
     // Style the button
+    button.style.fontSize = '13px';
     button.style.padding = '5px 10px';
-    button.style.fontSize = '16px';
-    button.style.backgroundColor = '#4CAF50';
+    button.style.backgroundColor = '#0D74DF';
     button.style.color = 'white';
     button.style.border = 'none';
-    button.style.borderRadius = '5px';
+    button.style.borderRadius = '4px';
     button.style.cursor = 'pointer';
 
     // Create the tag key input field
@@ -734,15 +760,21 @@ function addExportControls() {
     tagKeyInput.id = 'tagKeyInput';
     tagKeyInput.placeholder = 'Enter a tag key...';
     tagKeyInput.style.display = 'none'; // Hide input field by default
+
     // Match input field style with the dropdown and button
+    tagKeyInput.style.fontSize = '13px';
     tagKeyInput.style.padding = '5px';
     tagKeyInput.style.marginRight = '5px';
+    tagKeyInput.style.backgroundColor = '#3A444B';
+    tagKeyInput.style.border = 'none';
+    tagKeyInput.style.color = 'white';
+    tagKeyInput.style.borderRadius = '4px';
 
     // Create a wrapper div to hold the controls
     const controlsDiv = document.createElement('div');
     controlsDiv.id = 'exportControls';
     controlsDiv.style.position = 'fixed';
-    controlsDiv.style.top = '10px';
+    controlsDiv.style.top = '15px';
     controlsDiv.style.left = '50%';
     controlsDiv.style.transform = 'translateX(-50%)';
     controlsDiv.style.zIndex = 1000;
@@ -803,14 +835,14 @@ function addExportControls() {
 
 function startExportProgress(button) {
     button.disabled = true; // Disable the button while exporting
-    button.style.backgroundColor = '#c8c8c8'; // Change color to gray
+    button.style.backgroundColor = '#3A444B'; // Change color to gray
     button.style.cursor = 'default'; // Change cursor to default to indicate lack of interactivity
     button.textContent = 'Exporting...'; // Change button text to indicate exporting
 }
 
 function resetExportButton(button) {
     button.disabled = false; // Re-enable the button
-    button.style.backgroundColor = '#4CAF50'; // Reset the background color to original
+    button.style.backgroundColor = '#0D74DF'; // Reset the background color to original
     button.style.cursor = 'pointer'; // Reset the cursor to pointer
     button.textContent = 'Export Data'; // Reset button text to "Export Data"
 }
