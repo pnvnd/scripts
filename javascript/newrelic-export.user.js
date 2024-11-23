@@ -1,11 +1,12 @@
 // ==UserScript==
 // @name         Export New Relic Data
 // @namespace    http://newrelic.com
-// @version      3.7.0
-// @description  Send NerdGraph request with cookie and export results to CSV
+// @version      3.7.1
+// @description  Send NerdGraph request with cookie and export results
 // @author       Peter Nguyen
 // @match        https://one.newrelic.com/*
 // @match        https://one.eu.newrelic.com/*
+// @icon         https://newrelic.com/favicon.ico
 // @grant        none
 // @downloadURL  https://github.com/pnvnd/scripts/raw/refs/heads/master/javascript/newrelic-export.user.js
 // @updateURL    https://github.com/pnvnd/scripts/raw/refs/heads/master/javascript/newrelic-export.user.js
