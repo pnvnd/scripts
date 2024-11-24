@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         New Relic Data Export
 // @namespace    http://newrelic.com
-// @version      3.8.1
+// @version      3.8.2
 // @description  Send NerdGraph request with cookie and export results
 // @author       Peter Nguyen
 // @match        https://one.newrelic.com/*
@@ -681,6 +681,44 @@ async function exportNrqlConditions(cookie) {
                         });
 
                         const conditionsData = await conditionsResponse.json();
+
+                        if (conditionsData.errors) {
+                            console.log(`Error fetching conditions for policy ID ${policyId}: ${conditionsData.errors[0].message}`);
+                            nextConditionCursor = null; // Set cursor to null to exit the loop
+
+                            // Add a placeholder entry with N/A for fields that couldn't be fetched
+                            allConditions.push({
+                                accountName: accountName,
+                                accountId: accountId,
+                                policyName: policy.name,
+                                policyId: policy.id,
+                                conditionId: "N/A",
+                                createdAt: "N/A",
+                                "createdBy.name": "N/A",
+                                "createdBy.email": "N/A",
+                                description: "N/A",
+                                enabled: "N/A",
+                                entityGuid: "N/A",
+                                "nrql.query": "N/A",
+                                runbookUrl: "N/A",
+                                "signal.aggregationDelay": "N/A",
+                                "signal.aggregationMethod": "N/A",
+                                "signal.aggregationTimer": "N/A",
+                                "signal.aggregationWindow": "N/A",
+                                "signal.evaluationDelay": "N/A",
+                                "signal.fillOption": "N/A",
+                                "signal.fillValue": "N/A",
+                                "signal.slideBy": "N/A",
+                                "terms.operator": "N/A",
+                                "terms.priority": "N/A",
+                                "terms.threshold": "N/A",
+                                "terms.thresholdDuration": "N/A",
+                                "terms.thresholdOccurrences": "N/A"
+                            });
+
+                            continue;
+                        }
+
                         const conditions = conditionsData.data.actor.account.alerts.nrqlConditionsSearch.nrqlConditions;
                         nextConditionCursor = conditionsData.data.actor.account.alerts.nrqlConditionsSearch.nextCursor;
 
