@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Export New Relic Data
+// @name         New Relic Data Export
 // @namespace    http://newrelic.com
-// @version      3.7.1
+// @version      3.8.1
 // @description  Send NerdGraph request with cookie and export results
 // @author       Peter Nguyen
 // @match        https://one.newrelic.com/*
@@ -19,6 +19,10 @@
 const nerdgraphEndpoint = window.location.host.includes('one.eu.newrelic.com')
     ? 'https://one.eu.newrelic.com/graphql'
     : 'https://one.newrelic.com/graphql';
+
+/********************
+ * Helper Functions *
+ ********************/
 
 // Function to get all cookies as a single string
 function getCookies() {
@@ -46,7 +50,7 @@ function downloadCSV(data, filename) {
     }
 
     // Convert CSV content to a Blob
-    const csvBlob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const csvBlob = new Blob([csvContent], { type: 'text/csv; charset=utf-8;' });
 
     // Create an anchor element and proceed with the download
     let a = document.createElement('a');
@@ -57,16 +61,74 @@ function downloadCSV(data, filename) {
     document.body.removeChild(a);
 }
 
-// Get New Relic accounts
+// Function to convert JSON data to an HTML file and trigger download using Plotly
+function downloadHTML(data, filename) {
+    // Extract headers from the keys of the first data object
+    const headers = Object.keys(data[0]);
+    const headerNames = headers.map(header => `<b>${header}</b>`);
+
+    // Prepare data for Plotly table
+    const tableValues = headers.map(header => data.map(row => row[header]));
+
+    // Define the HTML structure
+    const htmlContent = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exported Data</title>
+    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
+</head>
+<body>
+    <div id="tableDiv"></div>
+    <script>
+        const tableData = [{
+            type: 'table',
+            header: {
+                values: ${JSON.stringify(headerNames)},
+                align: "center",
+                line: { width: 1, color: 'black' },
+                fill: { color: "grey" },
+                font: { family: "Arial", size: 12, color: "white" }
+            },
+            cells: {
+                values: ${JSON.stringify(tableValues)},
+                align: "center",
+                line: { color: "black", width: 1 },
+                fill: { color: ['white', 'lightgrey'] },
+                font: { family: "Arial", size: 11, color: ["black"] }
+            }
+        }];
+        Plotly.newPlot('tableDiv', tableData);
+    </script>
+</body>
+</html>`;
+
+    // Convert HTML content to a Blob
+    const htmlBlob = new Blob([htmlContent], { type: 'text/html; charset=utf-8;' });
+
+    // Create an anchor element and proceed with the download
+    let a = document.createElement('a');
+    a.href = URL.createObjectURL(htmlBlob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+}
+
+// Function to convert epoch milliseconds to a human-readable date format
+function epochToHumanReadable(epochMilliseconds) {
+    const date = new Date(epochMilliseconds);
+    return date.toLocaleString();
+}
+
+// Get New Relic accounts and organizations
 async function getAccounts(cookie) {
     const nerdgraphQuery = `
         {
           actor {
           accounts {
-            name
-            id
-          }
-          organization {
             name
             id
           }
@@ -86,170 +148,19 @@ async function getAccounts(cookie) {
                 query: nerdgraphQuery
             })
         });
+
         const nerdgraph = await response.json();
         return nerdgraph.data.actor.accounts;
+
     } catch (err) {
         console.log('Error: ' + err.message);
         return null;
     }
 }
 
-// Get drop rules
-async function exportDropRules(cookie) {
-    let allEntities = []; // Initialize an array to hold all entities
-    const accounts = await getAccounts(cookie);
-    if (!accounts) {
-        console.log('Failed to retrieve accounts.');
-        return;
-    }
-    for (const account of accounts) {
-        try {
-            const nerdgraphQuery = `
-                {
-                  actor {
-                    account(id: ${account.id}) {
-                      nrqlDropRules {
-                        list {
-                          rules {
-                            createdBy
-                            createdAt
-                            nrql
-                            description
-                            creator {
-                              name
-                              email
-                            }
-                            id
-                            action
-                            source
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-            `;
-            const response = await fetch(nerdgraphEndpoint, {
-                method: 'POST',
-                headers: {
-                    'content-type': 'application/json; charset=utf-8',
-                    'cookie': cookie,
-                    'newrelic-requesting-services': 'platform'
-                },
-                body: JSON.stringify({
-                    query: nerdgraphQuery
-                })
-            });
-            const nerdgraph = await response.json();
-            const rules = nerdgraph.data.actor.account.nrqlDropRules.list.rules;
-
-            // Process and flatten each rule before adding to allEntities array
-            for (const rule of rules) {
-                const flattenedRule = {
-                    "Account ID": account.id,
-                    "Account Name": account.name,
-                    "Creator Email": rule.creator ? rule.creator.email : null,
-                    "Creator Name": rule.creator ? rule.creator.name : null,
-                    createdBy: rule.createdBy,
-                    createdAt: rule.createdAt,
-                    nrql: rule.nrql,
-                    description: rule.description,
-                    id: rule.id,
-                    action: rule.action,
-                    source: rule.source
-                };
-                allEntities.push(flattenedRule);
-            }
-        } catch (err) {
-            console.log('Error fetching drop rules for account ' + account.id + ': ' + err.message);
-        }
-    }
-    // Once all data is collected, download it as CSV
-    if (allEntities.length > 0) {
-        downloadCSV(allEntities, 'drop_rules.csv');
-    } else {
-        console.log('No drop rules found.');
-    }
-}
-
-// Function to export metric normalization rules and download the response as CSV
-async function exportMetricNormalizationRules(cookie) {
-    let allEntities = []; // Initialize an array to hold all entities
-    const accounts = await getAccounts(cookie);
-    if (!accounts) {
-        console.log('Failed to retrieve accounts.');
-        return;
-    }
-    for (const account of accounts) {
-        try {
-            const nerdgraphQuery = `
-                {
-                  actor {
-                    account(id: ${account.id}) {
-                      metricNormalization {
-                        metricNormalizationRules {
-                          id
-                          enabled
-                          createdAt
-                          applicationName
-                          applicationGuid
-                          action
-                          evalOrder
-                          notes
-                          replacement
-                          terminateChain
-                          matchExpression
-                        }
-                      }
-                    }
-                  }
-                }
-            `;
-            const response = await fetch(nerdgraphEndpoint, {
-                method: 'POST',
-                headers: {
-                    'content-type': 'application/json; charset=utf-8',
-                    'cookie': cookie,
-                    'newrelic-requesting-services': 'platform'
-                },
-                body: JSON.stringify({
-                    query: nerdgraphQuery
-                })
-            });
-            const nerdgraph = await response.json();
-            const rules = nerdgraph.data.actor.account.metricNormalization.metricNormalizationRules;
-
-            // Process and flatten each rule before adding to allEntities array
-            for (const rule of rules) {
-                const flattenedRule = {
-                    "Account ID": account.id,
-                    "Account Name": account.name,
-                    id: rule.id,
-                    enabled: rule.enabled,
-                    createdAt: rule.createdAt,
-                    applicationName: rule.applicationName,
-                    applicationGuid: rule.applicationGuid,
-                    action: rule.action,
-                    evalOrder: rule.evalOrder,
-                    notes: rule.notes,
-                    replacement: rule.replacement,
-                    terminateChain: rule.terminateChain,
-                    matchExpression: rule.matchExpression
-                };
-                allEntities.push(flattenedRule);
-            }
-
-        } catch (err) {
-            console.log('Error fetching metric normalization rules for account ' + account.id + ': ' + err.message);
-        }
-    }
-    // Once all data is collected, download it as CSV
-    if (allEntities.length > 0) {
-        downloadCSV(allEntities, 'metricNormalizationRules.csv');
-    } else {
-        console.log('No metric normalization rules found.');
-    }
-}
+/********************
+ * Export Functions *
+ ********************/
 
 // Function to get accounts and download the response as CSV
 async function exportAccounts(cookie) {
@@ -346,9 +257,170 @@ async function exportEntities(cookie, tagKey="", domain="APM") {
         } while (nextCursor);
 
         // Once all data is collected, download it as CSV
-        downloadCSV(allEntities, 'entities.csv');
+        downloadCSV(allEntities, 'entities' + domain + '.csv');
     } catch (err) {
         console.log('Error: ' + err.message);
+    }
+}
+
+// Get drop rules for every account
+async function exportDropRules(cookie) {
+    let allEntities = []; // Initialize an array to hold all entities
+    const accounts = await getAccounts(cookie);
+    if (!accounts) {
+        console.log('Failed to retrieve accounts.');
+        return;
+    }
+    for (const account of accounts) {
+        try {
+            const nerdgraphQuery = `
+                query getDropRules($accountId: Int!){
+                  actor {
+                    account(id: $accountId) {
+                      nrqlDropRules {
+                        list {
+                          rules {
+                            createdBy
+                            createdAt
+                            nrql
+                            description
+                            creator {
+                              name
+                              email
+                            }
+                            id
+                            action
+                            source
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+            `;
+
+            const response = await fetch(nerdgraphEndpoint, {
+                method: 'POST',
+                headers: {
+                    'content-type': 'application/json; charset=utf-8',
+                    'cookie': cookie,
+                    'newrelic-requesting-services': 'platform'
+                },
+                body: JSON.stringify({
+                    query: nerdgraphQuery,
+                    variables: { accountId: account.id }
+                })
+            });
+
+            const nerdgraph = await response.json();
+            const rules = nerdgraph.data.actor.account.nrqlDropRules.list.rules;
+
+            // Process and flatten each rule before adding to allEntities array
+            for (const rule of rules) {
+                const flattenedRule = {
+                    "Account ID": account.id,
+                    "Account Name": account.name,
+                    "Creator Email": rule.creator ? rule.creator.email : null,
+                    "Creator Name": rule.creator ? rule.creator.name : null,
+                    createdBy: rule.createdBy,
+                    createdAt: rule.createdAt,
+                    nrql: rule.nrql,
+                    description: rule.description,
+                    id: rule.id,
+                    action: rule.action,
+                    source: rule.source
+                };
+                allEntities.push(flattenedRule);
+            }
+        } catch (err) {
+            console.log('Error fetching drop rules for account ' + account.id + ': ' + err.message);
+        }
+    }
+    // Once all data is collected, download it as CSV
+    if (allEntities.length > 0) {
+        downloadCSV(allEntities, 'dropRules.csv');
+    } else {
+        console.log('No drop rules found.');
+    }
+}
+
+// Function to export metric normalization rules and download the response as CSV
+async function exportMetricNormalizationRules(cookie) {
+    let allEntities = []; // Initialize an array to hold all entities
+    const accounts = await getAccounts(cookie);
+    if (!accounts) {
+        console.log('Failed to retrieve accounts.');
+        return;
+    }
+    for (const account of accounts) {
+        try {
+            const nerdgraphQuery = `
+                query getMetricNormalizationRules($accountId: Int!){
+                  actor {
+                    account(id: $accountId) {
+                      metricNormalization {
+                        metricNormalizationRules {
+                          id
+                          enabled
+                          createdAt
+                          applicationName
+                          applicationGuid
+                          action
+                          evalOrder
+                          notes
+                          replacement
+                          terminateChain
+                          matchExpression
+                        }
+                      }
+                    }
+                  }
+                }
+            `;
+            const response = await fetch(nerdgraphEndpoint, {
+                method: 'POST',
+                headers: {
+                    'content-type': 'application/json; charset=utf-8',
+                    'cookie': cookie,
+                    'newrelic-requesting-services': 'platform'
+                },
+                body: JSON.stringify({
+                    query: nerdgraphQuery,
+                    variables: { accountId: account.id }
+                })
+            });
+            const nerdgraph = await response.json();
+            const rules = nerdgraph.data.actor.account.metricNormalization.metricNormalizationRules;
+
+            // Process and flatten each rule before adding to allEntities array
+            for (const rule of rules) {
+                const flattenedRule = {
+                    "Account ID": account.id,
+                    "Account Name": account.name,
+                    id: rule.id,
+                    enabled: rule.enabled,
+                    createdAt: epochToHumanReadable(rule.createdAt), // Convert epoch to human-readable format
+                    applicationName: rule.applicationName,
+                    applicationGuid: rule.applicationGuid,
+                    action: rule.action,
+                    evalOrder: rule.evalOrder,
+                    notes: rule.notes,
+                    replacement: rule.replacement,
+                    terminateChain: rule.terminateChain,
+                    matchExpression: rule.matchExpression
+                };
+                allEntities.push(flattenedRule);
+            }
+
+        } catch (err) {
+            console.log('Error fetching metric normalization rules for account ' + account.id + ': ' + err.message);
+        }
+    }
+    // Once all data is collected, download it as CSV
+    if (allEntities.length > 0) {
+        downloadCSV(allEntities, 'metricNormalizationRules.csv');
+    } else {
+        console.log('No metric normalization rules found.');
     }
 }
 
@@ -359,11 +431,11 @@ async function exportSyntheticScripts(cookie) {
     try {
         // Step 1: Run the first GraphQL query to get Synthetic Monitor details
         do {
-            const initialQuery = `
-                {
+            const nerdgraphQuery = `
+                query getSyntheticMonitors($nextCursor: String){
                   actor {
                     entitySearch(queryBuilder: {domain: SYNTH, type: MONITOR}) {
-                      results(cursor: ${nextCursor ? JSON.stringify(nextCursor) : null}) {
+                      results(cursor: $nextCursor) {
                         entities {
                           ... on SyntheticMonitorEntityOutline {
                             accountId
@@ -387,7 +459,7 @@ async function exportSyntheticScripts(cookie) {
                 }
             `;
 
-            const initialResponse = await fetch(nerdgraphEndpoint, {
+            const response = await fetch(nerdgraphEndpoint, {
                 method: 'POST',
                 headers: {
                     'content-type': 'application/json; charset=utf-8',
@@ -395,18 +467,20 @@ async function exportSyntheticScripts(cookie) {
                     'newrelic-requesting-services': 'platform'
                 },
                 body: JSON.stringify({
-                    query: initialQuery
+                    query: nerdgraphQuery,
+                    variables: { nextCursor }
                 })
             });
 
-            const initialData = await initialResponse.json();
-            const initialResults = initialData.data.actor.entitySearch.results;
+            const nerdgraph = await response.json();
+            //const initialResults = initialData.data.actor.entitySearch.results;
+            nextCursor = nerdgraph.data.actor.entitySearch.results.nextCursor;
 
             // Process each entity to fetch the script text if monitorType is SCRIPT_BROWSER or SCRIPT_API
-            for (const entity of initialResults.entities) {
-                const accountId = entity.accountId;
-                const accountName = entity.account.name;
-                const monitorGuid = entity.guid;
+            for (const entity of nerdgraph.data.actor.entitySearch.results.entities) {
+                //const accountId = entity.accountId;
+                //const accountName = entity.account.name;
+                //const monitorGuid = entity.guid;
 
                 if (entity.monitorType === "SCRIPT_BROWSER" || entity.monitorType === "SCRIPT_API") {
                     // Step 2: Run the second GraphQL query for each accountId and guid
@@ -433,35 +507,32 @@ async function exportSyntheticScripts(cookie) {
                         },
                         body: JSON.stringify({
                             query: scriptQuery,
-                            variables: {
-                                accountId: accountId,
-                                monitorGuid: monitorGuid
-                            }
+                            variables: { accountId: entity.accountId, monitorGuid: entity.guid }
                         })
                     });
 
                     const scriptData = await scriptResponse.json();
-                    const scriptText = scriptData.data.actor.account.synthetics.script?.text || "N/A";
+                    //const scriptText = scriptData.data.actor.account.synthetics.script?.text || "N/A";
 
                     // Flatten the entity and script data
                     const flattenedEntity = {
-                        accountName: accountName,
-                        accountId: accountId,
-                        guid: monitorGuid,
+                        accountName: entity.account.name,
+                        accountId: entity.accountId,
+                        guid: entity.guid,
                         name: entity.name || "N/A",
                         monitorType: entity.monitorType || "N/A",
                         monitoredUrl: entity.monitoredUrl || "N/A",
                         period: entity.period || "N/A",
                         monitorStatus: entity.monitorSummary.status || "N/A",
-                        text: scriptText
+                        text: scriptData.data.actor.account.synthetics.script?.text || "N/A"
                     };
                     allEntities.push(flattenedEntity);
                 } else {
                     // Flatten the entity data with text as "N/A" when monitorType is not SCRIPT_BROWSER or SCRIPT_API
                     const flattenedEntity = {
-                        accountName: accountName,
-                        accountId: accountId,
-                        guid: monitorGuid,
+                        accountName: entity.account.name,
+                        accountId: entity.accountId,
+                        guid: entity.guid,
                         name: entity.name || "N/A",
                         monitorType: entity.monitorType || "N/A",
                         monitoredUrl: entity.monitoredUrl || "N/A",
@@ -474,12 +545,12 @@ async function exportSyntheticScripts(cookie) {
             }
 
             // Update the cursor for the next iteration
-            nextCursor = initialResults.nextCursor;
+            // cursor = initialResults.nextCursor;
 
         } while (nextCursor);
 
         // Once all data is collected, download it as CSV
-        downloadCSV(allEntities, 'synthetic_monitors.csv');
+        downloadCSV(allEntities, 'syntheticMonitors.csv');
     } catch (err) {
         console.log('Error: ' + err.message);
     }
@@ -499,9 +570,9 @@ async function exportNrqlConditions(cookie) {
 
             do {
                 const policiesQuery = `
-                    query getPolicies($account_id: Int!, $cursor: String) {
+                    query getPolicies($accountId: Int!, $cursor: String) {
                       actor {
-                        account(id: $account_id) {
+                        account(id: $accountId) {
                           alerts {
                             policiesSearch(cursor: $cursor) {
                               policies {
@@ -528,7 +599,7 @@ async function exportNrqlConditions(cookie) {
                     body: JSON.stringify({
                         query: policiesQuery,
                         variables: {
-                            account_id: accountId,
+                            accountId: accountId,
                             cursor: nextPolicyCursor
                         }
                     })
@@ -545,11 +616,11 @@ async function exportNrqlConditions(cookie) {
 
                     do {
                         const conditionsQuery = `
-                            query getNrqlConditions($account_id: Int!, $policy_id: ID, $cursor: String) {
+                            query getNrqlConditions($accountId: Int!, $policyId: ID, $cursor: String) {
                               actor {
-                                account(id: $account_id) {
+                                account(id: $accountId) {
                                   alerts {
-                                    nrqlConditionsSearch(searchCriteria: {policyId: $policy_id}, cursor: $cursor) {
+                                    nrqlConditionsSearch(searchCriteria: {policyId: $policyId}, cursor: $cursor) {
                                       nextCursor
                                       nrqlConditions {
                                         enabled
@@ -602,8 +673,8 @@ async function exportNrqlConditions(cookie) {
                             body: JSON.stringify({
                                 query: conditionsQuery,
                                 variables: {
-                                    account_id: accountId,
-                                    policy_id: policyId,
+                                    accountId: accountId,
+                                    policyId: policyId,
                                     cursor: nextConditionCursor
                                 }
                             })
@@ -625,7 +696,7 @@ async function exportNrqlConditions(cookie) {
                                     policyName: policy.name,
                                     policyId: policy.id,
                                     conditionId: condition.id,
-                                    createdAt: condition.createdAt || "N/A",
+                                    createdAt: epochToHumanReadable(condition.createdAt) || "N/A",
                                     "createdBy.name": condition.createdBy?.name || "N/A",
                                     "createdBy.email": condition.createdBy?.email || "N/A",
                                     description: condition.description || "N/A",
@@ -641,11 +712,11 @@ async function exportNrqlConditions(cookie) {
                                     "signal.fillOption": condition.signal.fillOption || "N/A",
                                     "signal.fillValue": condition.signal.fillValue || "N/A",
                                     "signal.slideBy": condition.signal.slideBy || "N/A",
-                                    "terms.operator": condition.terms[0].operator,
-                                    "terms.priority": condition.terms[0].priority,
-                                    "terms.threshold": condition.terms[0].threshold,
-                                    "terms.thresholdDuration": condition.terms[0].thresholdDuration,
-                                    "terms.thresholdOccurrences": condition.terms[0].thresholdOccurrences
+                                    "terms.operator": condition.terms[0].operator || "N/A",
+                                    "terms.priority": condition.terms[0].priority || "N/A",
+                                    "terms.threshold": condition.terms[0].threshold || "N/A",
+                                    "terms.thresholdDuration": condition.terms[0].thresholdDuration || "N/A",
+                                    "terms.thresholdOccurrences": condition.terms[0].thresholdOccurrences || "N/A"
                                 });
                             }
                         }
@@ -692,14 +763,68 @@ async function exportNrqlConditions(cookie) {
     }
 }
 
+// Function to export metric normalization rules and download the response as HTML
+async function exportGraphQLToHTML(cookie, accountId) {
+    const nerdgraphQuery = `
+        query getNrqlQuery($accountId: Int!) {
+          actor {
+            account(id: $accountId) {
+              monitor1: nrql(query:
+                """
+SELECT sum(consumption) AS 'CCUs Used'
+FROM NrConsumption
+WHERE metric = 'CoreCCU'
+FACET dimension_productCapability AS 'Dimension Product Capability'
+SINCE LAST MONTH UNTIL THIS MONTH
+LIMIT MAX
+                """, timeout: 90) {
+                results
+              }
+            }
+          }
+        }
+    `;
+
+    try {
+        const response = await fetch(nerdgraphEndpoint, {
+            method: 'POST',
+            headers: {
+                'content-type': 'application/json; charset=utf-8',
+                'cookie': cookie,
+                'newrelic-requesting-services': 'platform'
+            },
+            body: JSON.stringify({
+                query: nerdgraphQuery,
+                variables: { accountId: accountId }
+            })
+        });
+
+        const nerdgraph = await response.json();
+        const results = nerdgraph.data.actor.account.monitor1.results;
+
+        if (results && results.length > 0) {
+            downloadHTML(results, 'nrqlResults.html');
+        } else {
+            console.log('No data returned from the query.');
+        }
+    } catch (err) {
+        console.log('Error fetching GraphQL data: ' + err.message);
+    }
+}
+
+/***********************
+ * Front-end Functions *
+ ***********************/
+
 // Available functions for exporting data
 const exportFunctions = {
-    "Export Accounts": exportAccounts,
-    "Export Entities": exportEntities,
-    "Export Drop Rules": exportDropRules,
-    "Export Metric Normalization Rules": exportMetricNormalizationRules,
-    "Export Synthetic Monitors": exportSyntheticScripts,
-    "Export NRQL Alerts": exportNrqlConditions,
+    "Accounts": exportAccounts,
+    "Entities": exportEntities,
+    "Drop Rules": exportDropRules,
+    "Metric Normalization Rules": exportMetricNormalizationRules,
+    "Synthetic Monitors & Scripts": exportSyntheticScripts,
+    "NRQL Alert Policies & Conditions": exportNrqlConditions,
+    "CCU Report": exportGraphQLToHTML,
 };
 
 // Function to create and add a dropdown menu and button to the webpage
@@ -771,6 +896,22 @@ function addExportControls() {
     tagKeyInput.style.color = 'white';
     tagKeyInput.style.borderRadius = '4px';
 
+    // Create the account ID input field (initially hidden)
+    const accountIdInput = document.createElement('input');
+    accountIdInput.id = 'accountIdInput';
+    accountIdInput.type = 'number';
+    accountIdInput.placeholder = 'Enter Account ID...';
+    accountIdInput.style.display = 'none'; // Hide input field by default
+
+    // Match input field style with the dropdown and button
+    accountIdInput.style.fontSize = '13px';
+    accountIdInput.style.padding = '5px';
+    accountIdInput.style.marginRight = '5px';
+    accountIdInput.style.backgroundColor = '#3A444B';
+    accountIdInput.style.border = 'none';
+    accountIdInput.style.color = 'white';
+    accountIdInput.style.borderRadius = '4px';
+
     // Create a wrapper div to hold the controls
     const controlsDiv = document.createElement('div');
     controlsDiv.id = 'exportControls';
@@ -782,12 +923,18 @@ function addExportControls() {
 
     // Update the change event of the export function dropdown to show/hide input field and domain dropdown
     select.addEventListener('change', (e) => {
-        if (e.target.value === "Export Entities") {
+        if (e.target.value === "Entities") {
             tagKeyInput.style.display = 'inline'; // Show the tag key input field
             domainSelect.style.display = 'inline'; // Show the domain dropdown menu
+            accountIdInput.style.display = 'none'; // Hide the account ID input field
+        } else if (e.target.value === "CCU Report") {
+            accountIdInput.style.display = 'inline'; // Show the account ID input field
+            tagKeyInput.style.display = 'none'; // Hide the tag key input field
+            domainSelect.style.display = 'none'; // Hide the domain dropdown menu
         } else {
             tagKeyInput.style.display = 'none'; // Hide the tag key input field
             domainSelect.style.display = 'none'; // Hide the domain dropdown menu
+            accountIdInput.style.display = 'none'; // Hide the account ID input field
         }
     });
 
@@ -798,36 +945,45 @@ function addExportControls() {
         }
     });
 
-    // Modify the click event of the button to include the tag key in the function call
-    button.addEventListener('click', async () => {
-        const selectedFunctionName = select.value;
-        const exportFunction = exportFunctions[selectedFunctionName];
-        const selectedDomain = domainSelect.value;
-        if (exportFunction) {
-            startExportProgress(button);
-            try {
-                let cookie = getCookies(); // getCookies is assumed to return the necessary cookies
-                if (selectedFunctionName === "Export Entities") {
-                    const tagKey = tagKeyInput.value || 'appid';
-                    await exportFunction(cookie, tagKey, selectedDomain);
+// Modify the click event of the button to include the tag key in the function call
+button.addEventListener('click', async () => {
+    const selectedFunctionName = select.value;
+    const exportFunction = exportFunctions[selectedFunctionName];
+    const selectedDomain = domainSelect.value;
+    if (exportFunction) {
+        startExportProgress(button);
+        try {
+            let cookie = getCookies(); // getCookies is assumed to return the necessary cookies
+            if (selectedFunctionName === "Entities") {
+                const tagKey = tagKeyInput.value || 'appid';
+                await exportFunction(cookie, tagKey, selectedDomain);
+            } else if (selectedFunctionName === "CCU Report") {
+                const accountId = parseInt(accountIdInput.value); // Ensure accountId is a number
+                if (accountId) {
+                    await exportFunction(cookie, accountId);
                 } else {
-                    await exportFunction(cookie, selectedDomain);
+                    alert('Please enter a valid Account ID');
                 }
-                resetExportButton(button);
-            } catch (error) {
-                console.error('Export failed:', error);
-                resetExportButton(button);
-                alert(`Export failed: ${error.message}`);
+            } else {
+                await exportFunction(cookie, selectedDomain);
             }
-        } else {
-            alert('Selected function is not defined');
+            resetExportButton(button);
+        } catch (error) {
+            console.error('Export failed:', error);
+            resetExportButton(button);
+            alert(`Export failed: ${error.message}`);
         }
-    });
+    } else {
+        alert('Selected function is not defined');
+    }
+});
 
-    // Add the dropdown menus, tag key input field, and button to the wrapper
+
+    // Add the dropdown menus, input fields, and button to the wrapper
     controlsDiv.appendChild(select);
     controlsDiv.appendChild(domainSelect);
     controlsDiv.appendChild(tagKeyInput);
+    controlsDiv.appendChild(accountIdInput);
     controlsDiv.appendChild(button);
 
     // Add the controls to the webpage
