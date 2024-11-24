@@ -158,6 +158,67 @@ async function getAccounts(cookie) {
     }
 }
 
+// Function to create and add toaster notifications to the webpage
+function addToasterStyles() {
+    const style = document.createElement('style');
+    style.textContent = `
+        .toaster {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            width: 300px;
+            padding: 15px;
+            border-radius: 5px;
+            color: white;
+            font-size: 14px;
+            z-index: 9999;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            margin-bottom: 5px; /* Reduce space between toasters */
+        }
+        .toaster.error {
+            background-color: #D32F2F;
+        }
+        .toaster.success {
+            background-color: #4CAF50;
+        }
+        .toaster .close-btn {
+            position: absolute;
+            top: 5px;
+            right: 10px;
+            cursor: pointer;
+        }
+    `;
+    document.head.appendChild(style);
+}
+
+// Function to create a toaster
+function createToaster(message, type = 'error') {
+    const toaster = document.createElement('div');
+    toaster.className = `toaster ${type}`;
+    toaster.innerHTML = `
+        <span>${message}</span>
+        <span class="close-btn">x</span>
+    `;
+
+    toaster.querySelector('.close-btn').addEventListener('click', () => {
+        document.body.removeChild(toaster);
+        adjustToasterPositions();
+    });
+
+    document.body.appendChild(toaster);
+    adjustToasterPositions(); // Adjust positions after adding the new toaster
+}
+
+// Function to adjust the position of existing toasters
+function adjustToasterPositions() {
+    const toasters = document.querySelectorAll('.toaster');
+    let bottomOffset = 10; // Initial bottom offset
+    toasters.forEach((toaster) => {
+        toaster.style.bottom = `${bottomOffset}px`;
+        bottomOffset += toaster.offsetHeight + 5; // Update bottom offset with toaster height and reduced margin
+    });
+}
+
 /********************
  * Export Functions *
  ********************/
@@ -168,11 +229,12 @@ async function exportAccounts(cookie) {
         const accounts = await getAccounts(cookie);
         if (accounts) {
             downloadCSV(accounts, 'accounts.csv');
+            createToaster('Accounts exported successfully!', 'success');
         } else {
-            console.log('Failed to retrieve accounts.');
+            createToaster('Failed to retrieve accounts.');
         }
     } catch (err) {
-        console.log('Error: ' + err.message);
+        createToaster(`Error: ${err.message}`);
     }
 }
 
@@ -258,8 +320,9 @@ async function exportEntities(cookie, tagKey="", domain="APM") {
 
         // Once all data is collected, download it as CSV
         downloadCSV(allEntities, 'entities' + domain + '.csv');
+        createToaster(domain + ' Entities exported successfully!', 'success');
     } catch (err) {
-        console.log('Error: ' + err.message);
+        createToaster(`Error: ${err.message}`);
     }
 }
 
@@ -339,8 +402,9 @@ async function exportDropRules(cookie) {
     // Once all data is collected, download it as CSV
     if (allEntities.length > 0) {
         downloadCSV(allEntities, 'dropRules.csv');
+        createToaster('Drop Rules exported successfully!', 'success');
     } else {
-        console.log('No drop rules found.');
+        createToaster(`Error: No drop rules found`);
     }
 }
 
@@ -349,7 +413,7 @@ async function exportMetricNormalizationRules(cookie) {
     let allEntities = []; // Initialize an array to hold all entities
     const accounts = await getAccounts(cookie);
     if (!accounts) {
-        console.log('Failed to retrieve accounts.');
+        createToaster(`Error: Failed to retrieve accounts.`);
         return;
     }
     for (const account of accounts) {
@@ -413,14 +477,15 @@ async function exportMetricNormalizationRules(cookie) {
             }
 
         } catch (err) {
-            console.log('Error fetching metric normalization rules for account ' + account.id + ': ' + err.message);
+            createToaster('Error fetching metric normalization rules for account ' + account.id + ': ' + err.message);
         }
     }
     // Once all data is collected, download it as CSV
     if (allEntities.length > 0) {
         downloadCSV(allEntities, 'metricNormalizationRules.csv');
+        createToaster('Metric Normalization Rules exported successfully!', 'success');
     } else {
-        console.log('No metric normalization rules found.');
+        createToaster('No metric normalization rules found.');
     }
 }
 
@@ -543,16 +608,13 @@ async function exportSyntheticScripts(cookie) {
                     allEntities.push(flattenedEntity);
                 }
             }
-
-            // Update the cursor for the next iteration
-            // cursor = initialResults.nextCursor;
-
         } while (nextCursor);
 
         // Once all data is collected, download it as CSV
         downloadCSV(allEntities, 'syntheticMonitors.csv');
+        createToaster('Synthetic Monitor and Scripts exported successfully!', 'success');
     } catch (err) {
-        console.log('Error: ' + err.message);
+        createToaster(`Error: ${err.message}`);
     }
 }
 
@@ -683,7 +745,7 @@ async function exportNrqlConditions(cookie) {
                         const conditionsData = await conditionsResponse.json();
 
                         if (conditionsData.errors) {
-                            console.log(`Error fetching conditions for policy ID ${policyId}: ${conditionsData.errors[0].message}`);
+                            createToaster(`Error fetching conditions for policy ID ${policyId}: ${conditionsData.errors[0].message}`);
                             nextConditionCursor = null; // Set cursor to null to exit the loop
 
                             // Add a placeholder entry with N/A for fields that couldn't be fetched
@@ -796,8 +858,9 @@ async function exportNrqlConditions(cookie) {
 
         // Convert allConditions to CSV and trigger download
         downloadCSV(allConditions, 'nrqlAlertConditions.csv');
+        createToaster('NRQL Alert Conditions exported successfully!', 'success');
     } catch (err) {
-        console.log('Error: ' + err.message);
+        createToaster(`Error: ${err.message}`);
     }
 }
 
@@ -841,12 +904,13 @@ LIMIT MAX
         const results = nerdgraph.data.actor.account.monitor1.results;
 
         if (results && results.length > 0) {
-            downloadHTML(results, 'nrqlResults.html');
+            downloadHTML(results, accountId + '_healthcheck.html');
+            createToaster('Account Health Check exported successfully!', 'success');
         } else {
-            console.log('No data returned from the query.');
+            createToaster('No data returned from the query.');
         }
     } catch (err) {
-        console.log('Error fetching GraphQL data: ' + err.message);
+        createToaster(`Error: ${err.message}`);
     }
 }
 
@@ -862,7 +926,7 @@ const exportFunctions = {
     "Metric Normalization Rules": exportMetricNormalizationRules,
     "Synthetic Monitors & Scripts": exportSyntheticScripts,
     "NRQL Alert Policies & Conditions": exportNrqlConditions,
-    "CCU Report": exportGraphQLToHTML,
+    "Health Check": exportGraphQLToHTML,
 };
 
 // Function to create and add a dropdown menu and button to the webpage
@@ -965,7 +1029,7 @@ function addExportControls() {
             tagKeyInput.style.display = 'inline'; // Show the tag key input field
             domainSelect.style.display = 'inline'; // Show the domain dropdown menu
             accountIdInput.style.display = 'none'; // Hide the account ID input field
-        } else if (e.target.value === "CCU Report") {
+        } else if (e.target.value === "Health Check") {
             accountIdInput.style.display = 'inline'; // Show the account ID input field
             tagKeyInput.style.display = 'none'; // Hide the tag key input field
             domainSelect.style.display = 'none'; // Hide the domain dropdown menu
@@ -995,7 +1059,7 @@ button.addEventListener('click', async () => {
             if (selectedFunctionName === "Entities") {
                 const tagKey = tagKeyInput.value || 'appid';
                 await exportFunction(cookie, tagKey, selectedDomain);
-            } else if (selectedFunctionName === "CCU Report") {
+            } else if (selectedFunctionName === "Health Check") {
                 const accountId = parseInt(accountIdInput.value); // Ensure accountId is a number
                 if (accountId) {
                     await exportFunction(cookie, accountId);
@@ -1044,5 +1108,6 @@ function resetExportButton(button) {
 
 // Initialize the controls
 addExportControls();
+addToasterStyles();
 
 })();
