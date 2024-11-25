@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         New Relic Data Export
 // @namespace    http://newrelic.com
-// @version      3.9.2
+// @version      3.9.6
 // @description  Send NerdGraph request with cookie and export results
 // @author       Peter Nguyen
 // @match        https://one.newrelic.com/*
@@ -808,7 +808,7 @@ async function exportNrqlConditions(cookie) {
     }
 }
 
-// Function to export metric normalization rules and download the response as HTML
+// Function to export consumption metrics to HTML report
 async function exportGraphQLToHTML(cookie, accountId) {
     const nerdgraphQuery = `
     query getNrqlQuery($accountId: Int!) {
@@ -837,6 +837,22 @@ async function exportGraphQLToHTML(cookie, accountId) {
             WHERE metric IN ('BasicUsers', 'FullPlatformUsers', 'CoreUsers')
             FACET metric, monthOf(timestamp)
             SINCE 13 MONTHS AGO UNTIL THIS MONTH
+            LIMIT MAX
+            """
+          ) {
+            results
+          }
+          compute: nrql(
+            timeout: 90
+            query: """
+            SELECT sum(consumption) AS 'CCUs'
+            FROM NrConsumption
+            WHERE metric IN ('CCU', 'CoreCCU')
+            AND dimension_computeType != 'Entity Writes'
+            AND dimension_computeType != 'Entity Lookups'
+            AND dimension_computeType != 'Entity Relationships'
+            SINCE 13 MONTHS AGO UNTIL THIS MONTH
+            FACET dimension_productCapability, monthOf(timestamp)
             LIMIT MAX
             """
           ) {
@@ -877,13 +893,24 @@ async function exportGraphQLToHTML(cookie, accountId) {
 
         const usersTableData = Object.values(users).sort((a, b) => new Date(b["Month of timestamp"]) - new Date(a["Month of timestamp"]));
 
-        if (ingest.length > 0 || usersTableData.length > 0) {
+        const compute = nerdgraph.data.actor.account.compute.results.reduce((acc, row) => {
+            const [capability, month] = row.facet;
+            if (!acc[month]) acc[month] = { "Month of timestamp": month, "CCU Total": 0 };
+            acc[month][capability] = row.CCUs;
+            acc[month]["CCU Total"] += row.CCUs;
+            return acc;
+        }, {});
+
+        const computeTableData = Object.values(compute).sort((a, b) => new Date(b["Month of timestamp"]) - new Date(a["Month of timestamp"]));
+
+        if (ingest.length > 0 || usersTableData.length > 0 || computeTableData.length > 0) {
             const combinedData = {
                 ingest: ingest.length > 0 ? ingest : null,
-                users: usersTableData.length > 0 ? usersTableData : null
+                users: usersTableData.length > 0 ? usersTableData : null,
+                compute: computeTableData.length > 0 ? computeTableData : null
             };
             downloadHTML(combinedData, accountId + '_healthcheck.html');
-            createToaster('Account Health Check exported successfully!', 'success');
+            createToaster('Consumption Report exported successfully!', 'success');
         } else {
             createToaster('No data returned from the query.');
         }
@@ -892,17 +919,22 @@ async function exportGraphQLToHTML(cookie, accountId) {
     }
 }
 
+
 // Function to convert JSON data to an HTML file and trigger download using Plotly
 function downloadHTML(data, filename) {
+    function formatNumber(num) {
+        return num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
     function generateIngestHTML(ingestData) {
         // Extract headers from the keys of the first data object
         const headers = Object.keys(ingestData[0]);
         const headerNames = headers.map(header => `<b>${header}</b>`);
 
         // Prepare data for Plotly table and chart
-        const tableValues = headers.map(header => ingestData.map(row => row[header]));
+        const tableValues = headers.map(header => ingestData.map(row => formatNumber(row[header])));
         const xValues = ingestData.map(row => row["Month of timestamp"]).reverse();
-        const yValues = ingestData.map(row => row["Data Ingested"]).reverse();
+        const yValues = ingestData.map(row => row["Data Ingested"]).reverse().map(formatNumber);
 
         return `
             <h1>Ingest</h1>
@@ -1004,18 +1036,55 @@ function downloadHTML(data, filename) {
         `;
     }
 
+    function generateComputeHTML(computeData) {
+        // Extract headers and ensure "CCU Total" is the rightmost column
+        const headers = ["Month of timestamp", "APM", "Traces", "Alert Conditions", "Alerts", "Browser", "Dashboards", "Infrastructure", "Logs", "Mobile", "Synthetics", "CCU Total"];
+        const headerNames = headers.map(header => `<b>${header}</b>`);
+
+        // Prepare data for Plotly table
+        const tableValues = headers.map(header => computeData.map(row => formatNumber(row[header] || 0)));
+
+        return `
+            <h1>Compute</h1>
+            <div id="computeTable"></div>
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    const computeTableData = [{
+                        type: 'table',
+                        header: {
+                            values: ${JSON.stringify(headerNames)},
+                            align: "center",
+                            line: { width: 1, color: 'black' },
+                            fill: { color: "grey" },
+                            font: { family: "Arial", size: 12, color: "white" }
+                        },
+                        cells: {
+                            values: ${JSON.stringify(tableValues)},
+                            align: "center",
+                            line: { color: "black", width: 1 },
+                            fill: { color: ['white', 'lightgrey'] },
+                            font: { family: "Arial", size: 11, color: ["black"] }
+                        }
+                    }];
+                    Plotly.newPlot('computeTable', computeTableData);
+                });
+            </script>
+        `;
+    }
+
     const htmlContent = `
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Health Check Report</title>
+    <title>Consumption Report</title>
     <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
 </head>
 <body>
     ${data.ingest ? generateIngestHTML(data.ingest) : ''}
     ${data.users ? generateUsersHTML(data.users) : ''}
+    ${data.compute ? generateComputeHTML(data.compute) : ''}
 </body>
 </html>`;
 
@@ -1031,7 +1100,6 @@ function downloadHTML(data, filename) {
     document.body.removeChild(a);
 }
 
-
 /***********************
  * Front-end Functions *
  ***********************/
@@ -1044,7 +1112,7 @@ const exportFunctions = {
     "Metric Normalization Rules": exportMetricNormalizationRules,
     "Synthetic Monitors & Scripts": exportSyntheticScripts,
     "NRQL Alert Policies & Conditions": exportNrqlConditions,
-    "Health Check": exportGraphQLToHTML,
+    "Consumption Report": exportGraphQLToHTML,
 };
 
 // Function to create and add a dropdown menu and button to the webpage
@@ -1157,7 +1225,7 @@ function addExportControls() {
             tagKeyInput.style.display = 'inline'; // Show the tag key input field
             domainSelect.style.display = 'inline'; // Show the domain dropdown menu
             accountIdInput.style.display = 'none'; // Hide the account ID input field
-        } else if (e.target.value === "Health Check") {
+        } else if (e.target.value === "Consumption Report") {
             accountIdInput.style.display = 'inline'; // Show the account ID input field
             tagKeyInput.style.display = 'none'; // Hide the tag key input field
             domainSelect.style.display = 'none'; // Hide the domain dropdown menu
@@ -1187,7 +1255,7 @@ function addExportControls() {
                 if (selectedFunctionName === "Entities") {
                     const tagKey = tagKeyInput.value || 'appid';
                     await exportFunction(cookie, tagKey, selectedDomain);
-                } else if (selectedFunctionName === "Health Check") {
+                } else if (selectedFunctionName === "Consumption Report") {
                     const accountId = parseInt(accountIdInput.value); // Ensure accountId is a number
                     if (accountId) {
                         await exportFunction(cookie, accountId);
