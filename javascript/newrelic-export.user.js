@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         New Relic Data Export
 // @namespace    http://newrelic.com
-// @version      3.9.6
+// @version      3.9.9
 // @description  Send NerdGraph request with cookie and export results
 // @author       Peter Nguyen
 // @match        https://one.newrelic.com/*
@@ -822,7 +822,7 @@ async function exportGraphQLToHTML(cookie, accountId) {
             WHERE productLine = 'DataPlatform'
             AND (version = '0.4.2' OR nr.customerStructure='customer_contract')
             AND consumingAccountId IS NOT NULL
-            FACET monthOf(timestamp)
+            FACET consumingAccountName, monthOf(timestamp), usageMetric
             SINCE 13 MONTHS AGO UNTIL THIS MONTH
             LIMIT MAX
             """
@@ -878,8 +878,15 @@ async function exportGraphQLToHTML(cookie, accountId) {
         });
 
         const nerdgraph = await response.json();
-        const ingest = nerdgraph.data.actor.account.ingest.results.map(row => ({
-            "Month of timestamp": row["Month of timestamp"],
+        const ingestResults = nerdgraph?.data?.actor?.account?.ingest?.results || [];
+        if (ingestResults.length === 0) {
+            throw new Error('No results returned from the query.');
+        }
+
+        const ingest = ingestResults.map(row => ({
+            "Month of timestamp": row.facet[1],
+            "Metric": row.facet[2],
+            "Consuming Account Name": row.facet[0],
             "Data Ingested": row["Data Ingested"]
         }));
 
@@ -920,56 +927,100 @@ async function exportGraphQLToHTML(cookie, accountId) {
 }
 
 
-// Function to convert JSON data to an HTML file and trigger download using Plotly
+// Function to convert JSON data to an HTML file and trigger download
 function downloadHTML(data, filename) {
     function formatNumber(num) {
         return num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
     function generateIngestHTML(ingestData) {
-        // Extract headers from the keys of the first data object
-        const headers = Object.keys(ingestData[0]);
-        const headerNames = headers.map(header => `<b>${header}</b>`);
+        // Extract unique metrics and account names from the data, excluding specified columns
+        const excludedColumns = ["WorkloadBytes", "ServiceLevelsManagementBytes", "EventMarkerBytes", "SecurityBytes"];
+        const uniqueMetrics = [...new Set(ingestData.map(row => row.Metric).filter(metric => !excludedColumns.includes(metric) && Boolean(metric)))];
+        const uniqueAccountNames = [...new Set(ingestData.map(row => row["Consuming Account Name"]).filter(Boolean))];
 
-        // Prepare data for Plotly table and chart
-        const tableValues = headers.map(header => ingestData.map(row => formatNumber(row[header])));
-        const xValues = ingestData.map(row => row["Month of timestamp"]).reverse();
-        const yValues = ingestData.map(row => row["Data Ingested"]).reverse().map(formatNumber);
+        // Create a mapping of month to metric values
+        const monthToMetricsMap = ingestData.reduce((acc, row) => {
+            const { "Metric": metric, "Month of timestamp": month, "Data Ingested": dataIngested } = row;
+            const accountName = row["Consuming Account Name"];
+            if (month && metric && !excludedColumns.includes(metric)) {
+                if (!acc[month]) acc[month] = { "Month of timestamp": month, "Data Ingested": 0 };
+                acc[month][metric] = (acc[month][metric] || 0) + dataIngested;
+                acc[month][accountName] = (acc[month][accountName] || 0) + dataIngested;
+                acc[month]["Data Ingested"] += dataIngested;
+            }
+            return acc;
+        }, {});
+
+        // Convert the mapping to an array
+        const tableData = Object.values(monthToMetricsMap).sort((a, b) => new Date(a["Month of timestamp"]) - new Date(b["Month of timestamp"]));
+
+        function generateTableData(tableValues) {
+            const headers = ["Month of timestamp", "Data Ingested", ...uniqueMetrics];
+            const headerNames = headers.map(header => `<b>${header}</b>`);
+            const tableData = headers.map(header => tableValues.map(row => formatNumber(row[header] || 0)));
+            const fillColors = headers.map(header => header === "Month of timestamp" || header === "Data Ingested" ? "lightgrey" : "white");
+
+            return {
+                headers: headerNames,
+                data: tableData,
+                fillColors: fillColors
+            };
+        }
+
+        const initialTableData = generateTableData(tableData);
+
+        // Prepare data for the stacked bar chart
+        const xValues = [...new Set(ingestData.map(row => row["Month of timestamp"]))].sort((a, b) => new Date(a) - new Date(b));
+        const barChartData = uniqueAccountNames.map(accountName => ({
+            x: xValues,
+            y: xValues.map(month => {
+                const monthData = ingestData.find(row => row["Month of timestamp"] === month && row["Consuming Account Name"] === accountName);
+                return monthData ? monthData["Data Ingested"] : 0;
+            }),
+            name: accountName,
+            type: 'bar'
+        }));
 
         return `
             <h1>Ingest</h1>
-            <div id="ingestChart"></div>
-            <div id="ingestTable"></div>
+            <div id="ingestChart" style="height: 600px;"></div>
+            <div id="ingestTable" style="height: auto;"></div>
             <script>
-                const ingestTableData = [{
-                    type: 'table',
-                    header: {
-                        values: ${JSON.stringify(headerNames)},
-                        align: "center",
-                        line: { width: 1, color: 'black' },
-                        fill: { color: "grey" },
-                        font: { family: "Arial", size: 12, color: "white" }
-                    },
-                    cells: {
-                        values: ${JSON.stringify(tableValues)},
-                        align: "center",
-                        line: { color: "black", width: 1 },
-                        fill: { color: ['white', 'lightgrey'] },
-                        font: { family: "Arial", size: 11, color: ["black"] }
+                document.addEventListener('DOMContentLoaded', function() {
+                    function formatNumber(num) {
+                        return num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                     }
-                }];
-                const ingestChartData = [{
-                    x: ${JSON.stringify(xValues)},
-                    y: ${JSON.stringify(yValues)},
-                    type: 'bar'
-                }];
-                const layout = {
-                    title: 'Data Ingest vs. Month',
-                    xaxis: { title: 'Month' },
-                    yaxis: { title: 'Data Ingested' }
-                };
-                Plotly.newPlot('ingestChart', ingestChartData, layout);
-                Plotly.newPlot('ingestTable', ingestTableData);
+
+                    const ingestTableData = [{
+                        type: 'table',
+                        header: {
+                            values: ${JSON.stringify(initialTableData.headers)},
+                            align: "center",
+                            line: { width: 1, color: 'black' },
+                            fill: { color: "grey" },
+                            font: { family: "Arial", size: 12, color: "white" }
+                        },
+                        cells: {
+                            values: ${JSON.stringify(initialTableData.data)},
+                            align: "center",
+                            line: { color: "black", width: 1 },
+                            fill: { color: ${JSON.stringify(initialTableData.fillColors)} },
+                            font: { family: "Arial", size: 11, color: ["black"] }
+                        }
+                    }];
+
+                    const layout = {
+                        barmode: 'stack',
+                        title: 'Data Ingest vs. Month',
+                        xaxis: { title: 'Month' },
+                        yaxis: { title: 'Data Ingested' },
+                        height: 600 // Increased height
+                    };
+
+                    Plotly.newPlot('ingestChart', ${JSON.stringify(barChartData)}, layout);
+                    Plotly.newPlot('ingestTable', ingestTableData);
+                });
             </script>
         `;
     }
@@ -1079,6 +1130,11 @@ function downloadHTML(data, filename) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Consumption Report</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+    </style>
     <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
 </head>
 <body>
