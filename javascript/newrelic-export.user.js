@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         New Relic Data Export
 // @namespace    http://newrelic.com
-// @version      3.8.2
+// @version      3.9.2
 // @description  Send NerdGraph request with cookie and export results
 // @author       Peter Nguyen
 // @match        https://one.newrelic.com/*
@@ -55,62 +55,6 @@ function downloadCSV(data, filename) {
     // Create an anchor element and proceed with the download
     let a = document.createElement('a');
     a.href = URL.createObjectURL(csvBlob);
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-}
-
-// Function to convert JSON data to an HTML file and trigger download using Plotly
-function downloadHTML(data, filename) {
-    // Extract headers from the keys of the first data object
-    const headers = Object.keys(data[0]);
-    const headerNames = headers.map(header => `<b>${header}</b>`);
-
-    // Prepare data for Plotly table
-    const tableValues = headers.map(header => data.map(row => row[header]));
-
-    // Define the HTML structure
-    const htmlContent = `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Exported Data</title>
-    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
-</head>
-<body>
-    <div id="tableDiv"></div>
-    <script>
-        const tableData = [{
-            type: 'table',
-            header: {
-                values: ${JSON.stringify(headerNames)},
-                align: "center",
-                line: { width: 1, color: 'black' },
-                fill: { color: "grey" },
-                font: { family: "Arial", size: 12, color: "white" }
-            },
-            cells: {
-                values: ${JSON.stringify(tableValues)},
-                align: "center",
-                line: { color: "black", width: 1 },
-                fill: { color: ['white', 'lightgrey'] },
-                font: { family: "Arial", size: 11, color: ["black"] }
-            }
-        }];
-        Plotly.newPlot('tableDiv', tableData);
-    </script>
-</body>
-</html>`;
-
-    // Convert HTML content to a Blob
-    const htmlBlob = new Blob([htmlContent], { type: 'text/html; charset=utf-8;' });
-
-    // Create an anchor element and proceed with the download
-    let a = document.createElement('a');
-    a.href = URL.createObjectURL(htmlBlob);
     a.download = filename;
     document.body.appendChild(a);
     a.click();
@@ -867,23 +811,40 @@ async function exportNrqlConditions(cookie) {
 // Function to export metric normalization rules and download the response as HTML
 async function exportGraphQLToHTML(cookie, accountId) {
     const nerdgraphQuery = `
-        query getNrqlQuery($accountId: Int!) {
-          actor {
-            account(id: $accountId) {
-              monitor1: nrql(query:
-                """
-SELECT sum(consumption) AS 'CCUs Used'
-FROM NrConsumption
-WHERE metric = 'CoreCCU'
-FACET dimension_productCapability AS 'Dimension Product Capability'
-SINCE LAST MONTH UNTIL THIS MONTH
-LIMIT MAX
-                """, timeout: 90) {
-                results
-              }
-            }
+    query getNrqlQuery($accountId: Int!) {
+      actor {
+        account(id: $accountId) {
+          ingest: nrql(
+            timeout: 90
+            query: """
+            SELECT sum(GigabytesIngested) AS 'Data Ingested'
+            FROM NrConsumption
+            WHERE productLine = 'DataPlatform'
+            AND (version = '0.4.2' OR nr.customerStructure='customer_contract')
+            AND consumingAccountId IS NOT NULL
+            FACET monthOf(timestamp)
+            SINCE 13 MONTHS AGO UNTIL THIS MONTH
+            LIMIT MAX
+            """
+          ) {
+            results
+          }
+          users: nrql(
+            timeout: 90
+            query: """
+            SELECT latest(consumption)
+            FROM NrConsumption
+            WHERE metric IN ('BasicUsers', 'FullPlatformUsers', 'CoreUsers')
+            FACET metric, monthOf(timestamp)
+            SINCE 13 MONTHS AGO UNTIL THIS MONTH
+            LIMIT MAX
+            """
+          ) {
+            results
           }
         }
+      }
+    }
     `;
 
     try {
@@ -901,10 +862,27 @@ LIMIT MAX
         });
 
         const nerdgraph = await response.json();
-        const results = nerdgraph.data.actor.account.monitor1.results;
+        const ingest = nerdgraph.data.actor.account.ingest.results.map(row => ({
+            "Month of timestamp": row["Month of timestamp"],
+            "Data Ingested": row["Data Ingested"]
+        }));
 
-        if (results && results.length > 0) {
-            downloadHTML(results, accountId + '_healthcheck.html');
+        const users = nerdgraph.data.actor.account.users.results.reduce((acc, row) => {
+            const [userType, month] = row.facet;
+            if (!acc[month]) acc[month] = { "Month of timestamp": month, "Total Users": 0 };
+            acc[month][userType] = row["latest.consumption"];
+            acc[month]["Total Users"] += row["latest.consumption"];
+            return acc;
+        }, {});
+
+        const usersTableData = Object.values(users).sort((a, b) => new Date(b["Month of timestamp"]) - new Date(a["Month of timestamp"]));
+
+        if (ingest.length > 0 || usersTableData.length > 0) {
+            const combinedData = {
+                ingest: ingest.length > 0 ? ingest : null,
+                users: usersTableData.length > 0 ? usersTableData : null
+            };
+            downloadHTML(combinedData, accountId + '_healthcheck.html');
             createToaster('Account Health Check exported successfully!', 'success');
         } else {
             createToaster('No data returned from the query.');
@@ -913,6 +891,146 @@ LIMIT MAX
         createToaster(`Error: ${err.message}`);
     }
 }
+
+// Function to convert JSON data to an HTML file and trigger download using Plotly
+function downloadHTML(data, filename) {
+    function generateIngestHTML(ingestData) {
+        // Extract headers from the keys of the first data object
+        const headers = Object.keys(ingestData[0]);
+        const headerNames = headers.map(header => `<b>${header}</b>`);
+
+        // Prepare data for Plotly table and chart
+        const tableValues = headers.map(header => ingestData.map(row => row[header]));
+        const xValues = ingestData.map(row => row["Month of timestamp"]).reverse();
+        const yValues = ingestData.map(row => row["Data Ingested"]).reverse();
+
+        return `
+            <h1>Ingest</h1>
+            <div id="ingestChart"></div>
+            <div id="ingestTable"></div>
+            <script>
+                const ingestTableData = [{
+                    type: 'table',
+                    header: {
+                        values: ${JSON.stringify(headerNames)},
+                        align: "center",
+                        line: { width: 1, color: 'black' },
+                        fill: { color: "grey" },
+                        font: { family: "Arial", size: 12, color: "white" }
+                    },
+                    cells: {
+                        values: ${JSON.stringify(tableValues)},
+                        align: "center",
+                        line: { color: "black", width: 1 },
+                        fill: { color: ['white', 'lightgrey'] },
+                        font: { family: "Arial", size: 11, color: ["black"] }
+                    }
+                }];
+                const ingestChartData = [{
+                    x: ${JSON.stringify(xValues)},
+                    y: ${JSON.stringify(yValues)},
+                    type: 'bar'
+                }];
+                const layout = {
+                    title: 'Data Ingest vs. Month',
+                    xaxis: { title: 'Month' },
+                    yaxis: { title: 'Data Ingested' }
+                };
+                Plotly.newPlot('ingestChart', ingestChartData, layout);
+                Plotly.newPlot('ingestTable', ingestTableData);
+            </script>
+        `;
+    }
+
+    function generateUsersHTML(usersData) {
+        // Extract headers and ensure "Total Users" is the rightmost column
+        const headers = Object.keys(usersData[0]);
+        const totalUsersIndex = headers.indexOf("Total Users");
+        if (totalUsersIndex > -1) {
+            headers.push(headers.splice(totalUsersIndex, 1)[0]);
+        }
+        const headerNames = headers.map(header => `<b>${header}</b>`);
+
+        // Prepare data for Plotly table
+        const tableValues = headers.map(header => usersData.map(row => row[header] || 0));
+
+        // Prepare data for stacked bar chart
+        const xValues = usersData.map(row => row["Month of timestamp"]).reverse();
+        const uniqueUserTypes = headers.filter(header => header !== "Month of timestamp" && header !== "Total Users");
+
+        const barData = uniqueUserTypes.map(userType => ({
+            x: xValues,
+            y: xValues.map(month => {
+                const monthData = usersData.find(row => row["Month of timestamp"] === month);
+                return monthData ? monthData[userType] || 0 : 0;
+            }),
+            name: userType,
+            type: 'bar'
+        }));
+
+        return `
+            <h1>Users</h1>
+            <div id="usersChart"></div>
+            <div id="usersTable"></div>
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    const usersTableData = [{
+                        type: 'table',
+                        header: {
+                            values: ${JSON.stringify(headerNames)},
+                            align: "center",
+                            line: { width: 1, color: 'black' },
+                            fill: { color: "grey" },
+                            font: { family: "Arial", size: 12, color: "white" }
+                        },
+                        cells: {
+                            values: ${JSON.stringify(tableValues)},
+                            align: "center",
+                            line: { color: "black", width: 1 },
+                            fill: { color: ['white', 'lightgrey'] },
+                            font: { family: "Arial", size: 11, color: ["black"] }
+                        }
+                    }];
+                    const layout = {
+                        barmode: 'stack',
+                        title: 'Users by Month',
+                        xaxis: { title: 'Month' },
+                        yaxis: { title: 'Users' }
+                    };
+                    Plotly.newPlot('usersChart', ${JSON.stringify(barData)}, layout);
+                    Plotly.newPlot('usersTable', usersTableData);
+                });
+            </script>
+        `;
+    }
+
+    const htmlContent = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Health Check Report</title>
+    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
+</head>
+<body>
+    ${data.ingest ? generateIngestHTML(data.ingest) : ''}
+    ${data.users ? generateUsersHTML(data.users) : ''}
+</body>
+</html>`;
+
+    // Convert HTML content to a Blob
+    const htmlBlob = new Blob([htmlContent], { type: 'text/html; charset=utf-8;' });
+
+    // Create an anchor element and proceed with the download
+    let a = document.createElement('a');
+    a.href = URL.createObjectURL(htmlBlob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+}
+
 
 /***********************
  * Front-end Functions *
@@ -931,6 +1049,15 @@ const exportFunctions = {
 
 // Function to create and add a dropdown menu and button to the webpage
 function addExportControls() {
+    // Function to extract account ID from URL
+    function getAccountIdFromURL() {
+        const urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get('account');
+    }
+
+    // Get account ID from URL and set it as the value of accountIdInput
+    const accountId = getAccountIdFromURL();
+
     // Create the dropdown menu for export functions
     const select = document.createElement('select');
     select.id = 'exportFunctionSelect';
@@ -1003,6 +1130,7 @@ function addExportControls() {
     accountIdInput.id = 'accountIdInput';
     accountIdInput.type = 'number';
     accountIdInput.placeholder = 'Enter Account ID...';
+    accountIdInput.value = accountId ? accountId : ''; // Auto-fill with account ID from URL if available
     accountIdInput.style.display = 'none'; // Hide input field by default
 
     // Match input field style with the dropdown and button
@@ -1047,39 +1175,38 @@ function addExportControls() {
         }
     });
 
-// Modify the click event of the button to include the tag key in the function call
-button.addEventListener('click', async () => {
-    const selectedFunctionName = select.value;
-    const exportFunction = exportFunctions[selectedFunctionName];
-    const selectedDomain = domainSelect.value;
-    if (exportFunction) {
-        startExportProgress(button);
-        try {
-            let cookie = getCookies(); // getCookies is assumed to return the necessary cookies
-            if (selectedFunctionName === "Entities") {
-                const tagKey = tagKeyInput.value || 'appid';
-                await exportFunction(cookie, tagKey, selectedDomain);
-            } else if (selectedFunctionName === "Health Check") {
-                const accountId = parseInt(accountIdInput.value); // Ensure accountId is a number
-                if (accountId) {
-                    await exportFunction(cookie, accountId);
+    // Modify the click event of the button to include the tag key in the function call
+    button.addEventListener('click', async () => {
+        const selectedFunctionName = select.value;
+        const exportFunction = exportFunctions[selectedFunctionName];
+        const selectedDomain = domainSelect.value;
+        if (exportFunction) {
+            startExportProgress(button);
+            try {
+                let cookie = getCookies(); // getCookies is assumed to return the necessary cookies
+                if (selectedFunctionName === "Entities") {
+                    const tagKey = tagKeyInput.value || 'appid';
+                    await exportFunction(cookie, tagKey, selectedDomain);
+                } else if (selectedFunctionName === "Health Check") {
+                    const accountId = parseInt(accountIdInput.value); // Ensure accountId is a number
+                    if (accountId) {
+                        await exportFunction(cookie, accountId);
+                    } else {
+                        alert('Please enter a valid Account ID');
+                    }
                 } else {
-                    alert('Please enter a valid Account ID');
+                    await exportFunction(cookie, selectedDomain);
                 }
-            } else {
-                await exportFunction(cookie, selectedDomain);
+                resetExportButton(button);
+            } catch (error) {
+                console.error('Export failed:', error);
+                resetExportButton(button);
+                alert(`Export failed: ${error.message}`);
             }
-            resetExportButton(button);
-        } catch (error) {
-            console.error('Export failed:', error);
-            resetExportButton(button);
-            alert(`Export failed: ${error.message}`);
+        } else {
+            alert('Selected function is not defined');
         }
-    } else {
-        alert('Selected function is not defined');
-    }
-});
-
+    });
 
     // Add the dropdown menus, input fields, and button to the wrapper
     controlsDiv.appendChild(select);
