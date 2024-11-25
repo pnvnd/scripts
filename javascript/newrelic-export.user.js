@@ -909,7 +909,7 @@ async function exportGraphQLToHTML(cookie, accountId) {
                 users: usersTableData.length > 0 ? usersTableData : null,
                 compute: computeTableData.length > 0 ? computeTableData : null
             };
-            downloadHTML(combinedData, accountId + '_healthcheck.html');
+            downloadHTML(combinedData, accountId + '_consumption.html');
             createToaster('Consumption Report exported successfully!', 'success');
         } else {
             createToaster('No data returned from the query.');
