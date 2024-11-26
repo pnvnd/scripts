@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         New Relic Data Export
 // @namespace    http://newrelic.com
-// @version      4.0.0
+// @version      4.0.4
 // @description  Send NerdGraph request with cookie and export results
 // @author       Peter Nguyen
 // @match        https://one.newrelic.com/*
@@ -847,6 +847,7 @@ async function exportGraphQLToHTML(cookie, accountId) {
             SELECT sum(consumption) AS 'CCUs'
             FROM NrConsumption
             WHERE metric IN ('CCU', 'CoreCCU')
+            AND dimension_productCapability != 'Synthetics'
             AND dimension_computeType != 'Entity Writes'
             AND dimension_computeType != 'Entity Lookups'
             AND dimension_computeType != 'Entity Relationships'
@@ -905,16 +906,23 @@ async function exportGraphQLToHTML(cookie, accountId) {
         const compute = computeResults.reduce((acc, row) => {
             const [capability, month] = row.facet;
             if (!acc[month]) acc[month] = { "Month of timestamp": month, "Legacy CCUs": 0, "Alert CCUs": 0, "Dashboard CCUs": 0 };
+
+            // Add the capability's CCUs separately
+            acc[month][capability] = row.CCUs;
+
+            // Aggregate the CCUs for Alert and Dashboard
             if (capability === "Alert Conditions" || capability === "Alerts") {
                 acc[month]["Alert CCUs"] += row.CCUs;
             } else if (capability === "Dashboards") {
                 acc[month]["Dashboard CCUs"] += row.CCUs;
-            } else {
-                acc[month][capability] = row.CCUs;
-                acc[month]["Legacy CCUs"] += row.CCUs;
             }
+
+            // Aggregate all CCUs into Legacy CCUs
+            acc[month]["Legacy CCUs"] += row.CCUs;
+
             return acc;
         }, {});
+
 
         const computeTableData = Object.values(compute).sort((a, b) => new Date(b["Month of timestamp"]) - new Date(a["Month of timestamp"]));
 
@@ -924,7 +932,15 @@ async function exportGraphQLToHTML(cookie, accountId) {
                 users: usersTableData.length > 0 ? usersTableData : null,
                 compute: computeTableData.length > 0 ? computeTableData : null
             };
-            downloadHTML(combinedData, accountId + '_consumption.html', accountId);
+
+            // Get the current date
+            const currentDate = new Date();
+            const formattedDate = currentDate.toISOString().split('T')[0]; // Format as YYYY-MM-DD
+
+            // Construct the filename
+            const filename = `${formattedDate}_Consumption_${accountId}.html`;
+
+            downloadHTML(combinedData, filename, accountId);
             createToaster('Consumption Report exported successfully!', 'success');
         } else {
             createToaster('No data returned from the query.');
@@ -1193,14 +1209,44 @@ function downloadHTML(data, filename, accountId) {
 
     function generateComputeHTML(computeData) {
         // Extract headers and ensure "CCU Total" is the rightmost column
-        const headers = ["Month of timestamp", "Legacy CCUs", "Alert CCUs", "Dashboard CCUs", "APM", "Traces", "Browser", "Infrastructure", "Logs", "Mobile", "Synthetics"];
+        const headers = ["Month of timestamp", "Legacy CCUs", "Alert CCUs", "Dashboard CCUs", "APM", "Traces", "Browser", "Infrastructure", "Logs", "Mobile"];
         const headerNames = headers.map(header => `<b>${header}</b>`);
 
         // Prepare data for Plotly table
         const tableValues = headers.map(header => computeData.map(row => formatNumber(row[header] || 0)));
 
+        // Get the latest month data for the pie chart
+        const latestMonthData = computeData.sort((a, b) => new Date(b["Month of timestamp"]) - new Date(a["Month of timestamp"]))[0];
+
+        // Prepare data for the pie chart
+        const pieChartData = {
+            values: [],
+            labels: [],
+            type: 'pie'
+        };
+
+        for (const [key, value] of Object.entries(latestMonthData)) {
+            if (key !== "Month of timestamp" && key !== "Legacy CCUs" && key !== "Alert CCUs" && key !== "Dashboard CCUs") {
+                if (key === "Alert Conditions" || key === "Alerts") {
+                    const alertIndex = pieChartData.labels.indexOf("Alerts");
+                    if (alertIndex === -1) {
+                        pieChartData.labels.push("Alerts");
+                        pieChartData.values.push(value);
+                    } else {
+                        pieChartData.values[alertIndex] += value;
+                    }
+                } else {
+                    pieChartData.labels.push(key);
+                    pieChartData.values.push(value);
+                }
+            }
+        }
+
+        const pieChartTitle = `CCU Usage by Capability ${latestMonthData["Month of timestamp"]}`;
+
         return `
             <h2>Compute</h2>
+            <div id="computePieChart"></div>
             <div id="computeTable"></div>
             <script>
                 document.addEventListener('DOMContentLoaded', function() {
@@ -1221,11 +1267,24 @@ function downloadHTML(data, filename, accountId) {
                             font: { family: "Arial", size: 11, color: ["black"] }
                         }
                     }];
+
+                    const pieChartData = {
+                        values: ${JSON.stringify(pieChartData.values)},
+                        labels: ${JSON.stringify(pieChartData.labels)},
+                        type: 'pie'
+                    };
+
+                    const layout = {
+                        title: ${JSON.stringify(pieChartTitle)}
+                    };
+
+                    Plotly.newPlot('computePieChart', [pieChartData], layout);
                     Plotly.newPlot('computeTable', computeTableData);
                 });
             </script>
         `;
     }
+
 
     const htmlContent = `
 <!DOCTYPE html>
