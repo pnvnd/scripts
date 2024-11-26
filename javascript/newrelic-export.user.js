@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         New Relic Data Export
 // @namespace    http://newrelic.com
-// @version      3.9.9
+// @version      4.0.0
 // @description  Send NerdGraph request with cookie and export results
 // @author       Peter Nguyen
 // @match        https://one.newrelic.com/*
@@ -808,7 +808,6 @@ async function exportNrqlConditions(cookie) {
     }
 }
 
-// Function to export consumption metrics to HTML report
 async function exportGraphQLToHTML(cookie, accountId) {
     const nerdgraphQuery = `
     query getNrqlQuery($accountId: Int!) {
@@ -879,6 +878,9 @@ async function exportGraphQLToHTML(cookie, accountId) {
 
         const nerdgraph = await response.json();
         const ingestResults = nerdgraph?.data?.actor?.account?.ingest?.results || [];
+        const userResults = nerdgraph?.data?.actor?.account?.users?.results || [];
+        const computeResults = nerdgraph?.data?.actor?.account?.compute?.results || [];
+
         if (ingestResults.length === 0) {
             throw new Error('No results returned from the query.');
         }
@@ -890,7 +892,7 @@ async function exportGraphQLToHTML(cookie, accountId) {
             "Data Ingested": row["Data Ingested"]
         }));
 
-        const users = nerdgraph.data.actor.account.users.results.reduce((acc, row) => {
+        const users = userResults.reduce((acc, row) => {
             const [userType, month] = row.facet;
             if (!acc[month]) acc[month] = { "Month of timestamp": month, "Total Users": 0 };
             acc[month][userType] = row["latest.consumption"];
@@ -900,11 +902,17 @@ async function exportGraphQLToHTML(cookie, accountId) {
 
         const usersTableData = Object.values(users).sort((a, b) => new Date(b["Month of timestamp"]) - new Date(a["Month of timestamp"]));
 
-        const compute = nerdgraph.data.actor.account.compute.results.reduce((acc, row) => {
+        const compute = computeResults.reduce((acc, row) => {
             const [capability, month] = row.facet;
-            if (!acc[month]) acc[month] = { "Month of timestamp": month, "CCU Total": 0 };
-            acc[month][capability] = row.CCUs;
-            acc[month]["CCU Total"] += row.CCUs;
+            if (!acc[month]) acc[month] = { "Month of timestamp": month, "Legacy CCUs": 0, "Alert CCUs": 0, "Dashboard CCUs": 0 };
+            if (capability === "Alert Conditions" || capability === "Alerts") {
+                acc[month]["Alert CCUs"] += row.CCUs;
+            } else if (capability === "Dashboards") {
+                acc[month]["Dashboard CCUs"] += row.CCUs;
+            } else {
+                acc[month][capability] = row.CCUs;
+                acc[month]["Legacy CCUs"] += row.CCUs;
+            }
             return acc;
         }, {});
 
@@ -916,7 +924,7 @@ async function exportGraphQLToHTML(cookie, accountId) {
                 users: usersTableData.length > 0 ? usersTableData : null,
                 compute: computeTableData.length > 0 ? computeTableData : null
             };
-            downloadHTML(combinedData, accountId + '_consumption.html');
+            downloadHTML(combinedData, accountId + '_consumption.html', accountId);
             createToaster('Consumption Report exported successfully!', 'success');
         } else {
             createToaster('No data returned from the query.');
@@ -926,17 +934,105 @@ async function exportGraphQLToHTML(cookie, accountId) {
     }
 }
 
-
 // Function to convert JSON data to an HTML file and trigger download
-function downloadHTML(data, filename) {
+function downloadHTML(data, filename, accountId) {
     function formatNumber(num) {
-        return num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        return num.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+    }
+
+    function generateSummaryTable(ingestData, usersData, computeData) {
+        // Prepare the combined data
+        const combinedData = {};
+
+        // Prepare ingest data
+        ingestData.forEach(row => {
+            if (!combinedData[row["Month of timestamp"]]) {
+                combinedData[row["Month of timestamp"]] = { "Month of timestamp": row["Month of timestamp"], "Data (GB)": 0 };
+            }
+            combinedData[row["Month of timestamp"]]["Data (GB)"] += row["Data Ingested"];
+        });
+
+        // Prepare users data
+        usersData.forEach(row => {
+            if (!combinedData[row["Month of timestamp"]]) {
+                combinedData[row["Month of timestamp"]] = { "Month of timestamp": row["Month of timestamp"], "Total Users": 0, "Full Users": 0, "Core Users": 0, "Basic Users": 0 };
+            }
+            combinedData[row["Month of timestamp"]]["Total Users"] = row["Total Users"];
+            combinedData[row["Month of timestamp"]]["Full Users"] = row["FullPlatformUsers"] || 0;
+            combinedData[row["Month of timestamp"]]["Core Users"] = row["CoreUsers"] || 0;
+            combinedData[row["Month of timestamp"]]["Basic Users"] = row["BasicUsers"] || 0;
+        });
+
+        // Prepare compute data
+        computeData.forEach(row => {
+            if (!combinedData[row["Month of timestamp"]]) {
+                combinedData[row["Month of timestamp"]] = { "Month of timestamp": row["Month of timestamp"], "Legacy CCUs": 0, "Alert CCUs": 0, "Dashboard CCUs": 0 };
+            }
+            combinedData[row["Month of timestamp"]]["Legacy CCUs"] = row["Legacy CCUs"];
+            combinedData[row["Month of timestamp"]]["Alert CCUs"] = row["Alert CCUs"];
+            combinedData[row["Month of timestamp"]]["Dashboard CCUs"] = row["Dashboard CCUs"];
+        });
+
+        const summaryTableData = Object.values(combinedData).sort((a, b) => new Date(a["Month of timestamp"]) - new Date(b["Month of timestamp"]));
+
+        function generateSummaryTableHTML(tableData) {
+            const headers = ["Month of timestamp", "Legacy CCUs", "Alert CCUs", "Dashboard CCUs", "Total Users", "Full Users", "Core Users", "Basic Users", "Data (GB)"];
+            const headerNames = headers.map(header => `<b>${header}</b>`);
+            const tableDataValues = headers.map(header => tableData.map(row => formatNumber(row[header] || 0)));
+
+            return {
+                headers: headerNames,
+                data: tableDataValues
+            };
+        }
+
+        const summaryTableHTMLData = generateSummaryTableHTML(summaryTableData);
+
+        return `
+            <h2>Summary</h2>
+            <div id="summaryTable"></div>
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    function formatNumber(num) {
+                        return num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    }
+
+                    const summaryTableData = [{
+                        type: 'table',
+                        header: {
+                            values: ${JSON.stringify(summaryTableHTMLData.headers)},
+                            align: "center",
+                            line: { width: 1, color: 'black' },
+                            fill: { color: "grey" },
+                            font: { family: "Arial", size: 12, color: "white" }
+                        },
+                        cells: {
+                            values: ${JSON.stringify(summaryTableHTMLData.data)},
+                            align: "center",
+                            line: { color: "black", width: 1 },
+                            fill: { color: ['white', 'lightgrey'] },
+                            font: { family: "Arial", size: 11, color: ["black"] }
+                        }
+                    }];
+
+                    Plotly.newPlot('summaryTable', summaryTableData);
+                });
+            </script>
+        `;
     }
 
     function generateIngestHTML(ingestData) {
         // Extract unique metrics and account names from the data, excluding specified columns
-        const excludedColumns = ["WorkloadBytes", "ServiceLevelsManagementBytes", "EventMarkerBytes", "SecurityBytes"];
-        const uniqueMetrics = [...new Set(ingestData.map(row => row.Metric).filter(metric => !excludedColumns.includes(metric) && Boolean(metric)))];
+        const excludedColumns = ["PixieBytes"];
+        let uniqueMetrics = [...new Set(ingestData.map(row => row.Metric).filter(metric => !excludedColumns.includes(metric) && Boolean(metric)))];
+
+        // Add the new combined columns and remove the individual columns
+        uniqueMetrics = uniqueMetrics.filter(metric => !["ApmEventsBytes", "TracingBytes", "InfraIntegrationBytes", "InfraProcessBytes", "InfraHostBytes", "MetricsBytes", "PixieBytes", "CustomEventsBytes", "WorkloadsBytes", "MarkerEventsBytes", "SecurityBytes", "ServiceLevelsManagementBytes", "ServerlessBytes"].includes(metric));
+        uniqueMetrics.push("APM", "Infrastructure", "External/Others");
+
+        // Rename "LoggingBytes" to "Logging"
+        uniqueMetrics = uniqueMetrics.map(metric => metric === "LoggingBytes" ? "Logging" : metric);
+
         const uniqueAccountNames = [...new Set(ingestData.map(row => row["Consuming Account Name"]).filter(Boolean))];
 
         // Create a mapping of month to metric values
@@ -944,8 +1040,16 @@ function downloadHTML(data, filename) {
             const { "Metric": metric, "Month of timestamp": month, "Data Ingested": dataIngested } = row;
             const accountName = row["Consuming Account Name"];
             if (month && metric && !excludedColumns.includes(metric)) {
-                if (!acc[month]) acc[month] = { "Month of timestamp": month, "Data Ingested": 0 };
-                acc[month][metric] = (acc[month][metric] || 0) + dataIngested;
+                if (!acc[month]) acc[month] = { "Month of timestamp": month, "Data Ingested": 0, "APM": 0, "Infrastructure": 0, "External/Others": 0 };
+                if (metric === "ApmEventsBytes" || metric === "TracingBytes" || metric === "SecurityBytes" || metric === "ServerlessBytes") {
+                    acc[month].APM += dataIngested;
+                } else if (metric === "InfraIntegrationBytes" || metric === "InfraProcessBytes" || metric === "InfraHostBytes" || metric === "PixieBytes") {
+                    acc[month].Infrastructure += dataIngested;
+                } else if (metric === "MetricsBytes" || metric === "CustomEventsBytes" || metric === "WorkloadsBytes" || metric === "MarkerEventsBytes" || metric === "ServiceLevelsManagementBytes") {
+                    acc[month]["External/Others"] += dataIngested;
+                } else {
+                    acc[month][metric === "LoggingBytes" ? "Logging" : metric] = (acc[month][metric === "LoggingBytes" ? "Logging" : metric] || 0) + dataIngested;
+                }
                 acc[month][accountName] = (acc[month][accountName] || 0) + dataIngested;
                 acc[month]["Data Ingested"] += dataIngested;
             }
@@ -975,15 +1079,15 @@ function downloadHTML(data, filename) {
         const barChartData = uniqueAccountNames.map(accountName => ({
             x: xValues,
             y: xValues.map(month => {
-                const monthData = ingestData.find(row => row["Month of timestamp"] === month && row["Consuming Account Name"] === accountName);
-                return monthData ? monthData["Data Ingested"] : 0;
+                const monthData = tableData.find(row => row["Month of timestamp"] === month);
+                return monthData ? monthData[accountName] || 0 : 0;
             }),
             name: accountName,
             type: 'bar'
         }));
 
         return `
-            <h1>Ingest</h1>
+            <h2>Ingest</h2>
             <div id="ingestChart" style="height: 600px;"></div>
             <div id="ingestTable" style="height: auto;"></div>
             <script>
@@ -1052,7 +1156,7 @@ function downloadHTML(data, filename) {
         }));
 
         return `
-            <h1>Users</h1>
+            <h2>Users</h2>
             <div id="usersChart"></div>
             <div id="usersTable"></div>
             <script>
@@ -1089,14 +1193,14 @@ function downloadHTML(data, filename) {
 
     function generateComputeHTML(computeData) {
         // Extract headers and ensure "CCU Total" is the rightmost column
-        const headers = ["Month of timestamp", "APM", "Traces", "Alert Conditions", "Alerts", "Browser", "Dashboards", "Infrastructure", "Logs", "Mobile", "Synthetics", "CCU Total"];
+        const headers = ["Month of timestamp", "Legacy CCUs", "Alert CCUs", "Dashboard CCUs", "APM", "Traces", "Browser", "Infrastructure", "Logs", "Mobile", "Synthetics"];
         const headerNames = headers.map(header => `<b>${header}</b>`);
 
         // Prepare data for Plotly table
         const tableValues = headers.map(header => computeData.map(row => formatNumber(row[header] || 0)));
 
         return `
-            <h1>Compute</h1>
+            <h2>Compute</h2>
             <div id="computeTable"></div>
             <script>
                 document.addEventListener('DOMContentLoaded', function() {
@@ -1138,6 +1242,8 @@ function downloadHTML(data, filename) {
     <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
 </head>
 <body>
+    <h1>Consumption Report for Account # ${accountId}</h1>
+    ${generateSummaryTable(data.ingest, data.users, data.compute)}
     ${data.ingest ? generateIngestHTML(data.ingest) : ''}
     ${data.users ? generateUsersHTML(data.users) : ''}
     ${data.compute ? generateComputeHTML(data.compute) : ''}
