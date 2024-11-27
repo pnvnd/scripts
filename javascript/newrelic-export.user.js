@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         New Relic Data Export
 // @namespace    http://newrelic.com
-// @version      4.0.4
+// @version      4.0.5
 // @description  Send NerdGraph request with cookie and export results
 // @author       Peter Nguyen
 // @match        https://one.newrelic.com/*
@@ -822,7 +822,7 @@ async function exportGraphQLToHTML(cookie, accountId) {
             AND (version = '0.4.2' OR nr.customerStructure='customer_contract')
             AND consumingAccountId IS NOT NULL
             FACET consumingAccountName, monthOf(timestamp), usageMetric
-            SINCE 13 MONTHS AGO UNTIL THIS MONTH
+            SINCE '2023-10-01 00:00:00'
             LIMIT MAX
             """
           ) {
@@ -835,7 +835,7 @@ async function exportGraphQLToHTML(cookie, accountId) {
             FROM NrConsumption
             WHERE metric IN ('BasicUsers', 'FullPlatformUsers', 'CoreUsers')
             FACET metric, monthOf(timestamp)
-            SINCE 13 MONTHS AGO UNTIL THIS MONTH
+            SINCE '2023-10-01 00:00:00'
             LIMIT MAX
             """
           ) {
@@ -851,8 +851,67 @@ async function exportGraphQLToHTML(cookie, accountId) {
             AND dimension_computeType != 'Entity Writes'
             AND dimension_computeType != 'Entity Lookups'
             AND dimension_computeType != 'Entity Relationships'
-            SINCE 13 MONTHS AGO UNTIL THIS MONTH
+            SINCE '2023-10-01 00:00:00'
             FACET dimension_productCapability, monthOf(timestamp)
+            LIMIT MAX
+            """
+          ) {
+            results
+          }
+          enr: nrql(
+            timeout: 90
+            query: """
+            SELECT sum(consumption + ignoredConsumption) AS 'CCUs Used'
+            FROM NrConsumption
+            WHERE metric IN ('CCU', 'UnbilledCCU', 'CoreCCU')
+            AND (dimension_computeType IN ('Entity Writes', 'Entity Lookups', 'Entity Relationships')
+            OR dimension_productCapability IN ('ENTITIES_AND_RELATIONSHIPS', 'Entities & Relationships'))
+            SINCE '2024-05-01'
+            FACET monthOf(timestamp)
+            LIMIT MAX
+            """
+          ) {
+            results
+          }
+          synthetics: nrql(
+            timeout: 90
+            query: """
+            SELECT sum(consumption + ignoredConsumption) AS 'CCUs Used'
+            FROM NrConsumption
+            WHERE metric IN ('CCU', 'UnbilledCCU', 'CoreCCU')
+            AND dimension_productCapability = 'Synthetics'
+            AND dimension_computeType != 'Entity Writes'
+            AND dimension_computeType != 'Entity Lookups'
+            AND dimension_computeType != 'Entity Relationships'
+            SINCE '2024-09-01'
+            FACET monthOf(timestamp)
+            LIMIT MAX
+            """
+          ) {
+            results
+          }
+          core: nrql(
+            timeout: 90
+            query: """
+            FROM NrConsumption
+            SELECT sum(consumption + ignoredConsumption) AS 'CCUs Used'
+            WHERE metric IN ('CCU', 'UnbilledCCU', 'CoreCCU')
+            SINCE '2024-08-01'
+            FACET monthOf(timestamp)
+            LIMIT MAX
+            """
+          ) {
+            results
+          }
+          advanced: nrql(
+            timeout: 90
+            query: """
+            SELECT sum(consumption) AS 'CCUs Used'
+            FROM NrConsumption
+            WHERE metric IN ('AdvancedCCU', 'CCU')
+            AND (dimension_dataCategory = 'LiveArchive' OR dimension_productCapability = 'IAST')
+            SINCE '2024-04-01'
+            FACET monthOf(timestamp)
             LIMIT MAX
             """
           ) {
@@ -878,9 +937,14 @@ async function exportGraphQLToHTML(cookie, accountId) {
         });
 
         const nerdgraph = await response.json();
+
         const ingestResults = nerdgraph?.data?.actor?.account?.ingest?.results || [];
         const userResults = nerdgraph?.data?.actor?.account?.users?.results || [];
         const computeResults = nerdgraph?.data?.actor?.account?.compute?.results || [];
+        const enrResults = nerdgraph?.data?.actor?.account?.enr?.results || [];
+        const syntheticsResults = nerdgraph?.data?.actor?.account?.synthetics?.results || [];
+        const coreResults = nerdgraph?.data?.actor?.account?.core?.results || [];
+        const advancedResults = nerdgraph?.data?.actor?.account?.advanced?.results || [];
 
         if (ingestResults.length === 0) {
             throw new Error('No results returned from the query.');
@@ -923,14 +987,37 @@ async function exportGraphQLToHTML(cookie, accountId) {
             return acc;
         }, {});
 
-
         const computeTableData = Object.values(compute).sort((a, b) => new Date(b["Month of timestamp"]) - new Date(a["Month of timestamp"]));
 
-        if (ingest.length > 0 || usersTableData.length > 0 || computeTableData.length > 0) {
+        const enr = enrResults.map(row => ({
+            "Month of timestamp": row.facet,
+            "CCUs Used": row["CCUs Used"]
+        }));
+
+        const synthetics = syntheticsResults.map(row => ({
+            "Month of timestamp": row.facet,
+            "CCUs Used": row["CCUs Used"]
+        }));
+
+        const core = coreResults.map(row => ({
+            "Month of timestamp": row.facet,
+            "CCUs Used": row["CCUs Used"]
+        }));
+
+        const advanced = advancedResults.map(row => ({
+            "Month of timestamp": row.facet,
+            "CCUs Used": row["CCUs Used"]
+        }));
+
+        if (ingest.length > 0 || usersTableData.length > 0 || computeTableData.length > 0 || enr.length > 0 || synthetics.length > 0 || core.length > 0 || advanced.length > 0) {
             const combinedData = {
                 ingest: ingest.length > 0 ? ingest : null,
                 users: usersTableData.length > 0 ? usersTableData : null,
-                compute: computeTableData.length > 0 ? computeTableData : null
+                compute: computeTableData.length > 0 ? computeTableData : null,
+                enr: enr.length > 0 ? enr : null,
+                synthetics: synthetics.length > 0 ? synthetics : null,
+                core: core.length > 0 ? core : null,
+                advanced: advanced.length > 0 ? advanced : null
             };
 
             // Get the current date
@@ -943,20 +1030,20 @@ async function exportGraphQLToHTML(cookie, accountId) {
             downloadHTML(combinedData, filename, accountId);
             createToaster('Consumption Report exported successfully!', 'success');
         } else {
-            createToaster('No data returned from the query.');
+            createToaster('No data available for export.', 'error');
         }
-    } catch (err) {
-        createToaster(`Error: ${err.message}`);
+    } catch (error) {
+        createToaster(`GraphQL query failed: ${error.message}`, 'error');
     }
 }
 
 // Function to convert JSON data to an HTML file and trigger download
 function downloadHTML(data, filename, accountId) {
     function formatNumber(num) {
-        return num.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+        return num.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
     }
 
-    function generateSummaryTable(ingestData, usersData, computeData) {
+    function generateSummaryTable(ingestData, usersData, computeData, enrData, syntheticsData, coreData, advancedData) {
         // Prepare the combined data
         const combinedData = {};
 
@@ -974,9 +1061,9 @@ function downloadHTML(data, filename, accountId) {
                 combinedData[row["Month of timestamp"]] = { "Month of timestamp": row["Month of timestamp"], "Total Users": 0, "Full Users": 0, "Core Users": 0, "Basic Users": 0 };
             }
             combinedData[row["Month of timestamp"]]["Total Users"] = row["Total Users"];
-            combinedData[row["Month of timestamp"]]["Full Users"] = row["FullPlatformUsers"] || 0;
-            combinedData[row["Month of timestamp"]]["Core Users"] = row["CoreUsers"] || 0;
-            combinedData[row["Month of timestamp"]]["Basic Users"] = row["BasicUsers"] || 0;
+            combinedData[row["Month of timestamp"]]["Full Users"] = row.FullPlatformUsers || 0;
+            combinedData[row["Month of timestamp"]]["Core Users"] = row.CoreUsers || 0;
+            combinedData[row["Month of timestamp"]]["Basic Users"] = row.BasicUsers || 0;
         });
 
         // Prepare compute data
@@ -989,10 +1076,42 @@ function downloadHTML(data, filename, accountId) {
             combinedData[row["Month of timestamp"]]["Dashboard CCUs"] = row["Dashboard CCUs"];
         });
 
+        // Prepare enr data
+        enrData.forEach(row => {
+            if (!combinedData[row["Month of timestamp"]]) {
+                combinedData[row["Month of timestamp"]] = { "Month of timestamp": row["Month of timestamp"], "E&R CCUs": 0 };
+            }
+            combinedData[row["Month of timestamp"]]["E&R CCUs"] = row["CCUs Used"] || 0;
+        });
+
+        // Prepare synthetics data
+        syntheticsData.forEach(row => {
+            if (!combinedData[row["Month of timestamp"]]) {
+                combinedData[row["Month of timestamp"]] = { "Month of timestamp": row["Month of timestamp"], "Synthetics CCUs": 0 };
+            }
+            combinedData[row["Month of timestamp"]]["Synthetics CCUs"] = row["CCUs Used"] || 0;
+        });
+
+        // Prepare core data
+        coreData.forEach(row => {
+            if (!combinedData[row["Month of timestamp"]]) {
+                combinedData[row["Month of timestamp"]] = { "Month of timestamp": row["Month of timestamp"], "Core CCUs": 0 };
+            }
+            combinedData[row["Month of timestamp"]]["Core CCUs"] = row["CCUs Used"] || 0;
+        });
+
+        // Prepare advanced data
+        advancedData.forEach(row => {
+            if (!combinedData[row["Month of timestamp"]]) {
+                combinedData[row["Month of timestamp"]] = { "Month of timestamp": row["Month of timestamp"], "Advanced CCUs": 0 };
+            }
+            combinedData[row["Month of timestamp"]]["Advanced CCUs"] = row["CCUs Used"] || 0;
+        });
+
         const summaryTableData = Object.values(combinedData).sort((a, b) => new Date(a["Month of timestamp"]) - new Date(b["Month of timestamp"]));
 
         function generateSummaryTableHTML(tableData) {
-            const headers = ["Month of timestamp", "Legacy CCUs", "Alert CCUs", "Dashboard CCUs", "Total Users", "Full Users", "Core Users", "Basic Users", "Data (GB)"];
+            const headers = ["Month of timestamp", "Legacy CCUs", "Core CCUs", "Advanced CCUs", "Alert CCUs", "Dashboard CCUs", "E&R CCUs", "Synthetics CCUs", "Total Users", "Full Users", "Core Users", "Basic Users", "Data (GB)"];
             const headerNames = headers.map(header => `<b>${header}</b>`);
             const tableDataValues = headers.map(header => tableData.map(row => formatNumber(row[header] || 0)));
 
@@ -1009,10 +1128,6 @@ function downloadHTML(data, filename, accountId) {
             <div id="summaryTable"></div>
             <script>
                 document.addEventListener('DOMContentLoaded', function() {
-                    function formatNumber(num) {
-                        return num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                    }
-
                     const summaryTableData = [{
                         type: 'table',
                         header: {
@@ -1108,10 +1223,6 @@ function downloadHTML(data, filename, accountId) {
             <div id="ingestTable" style="height: auto;"></div>
             <script>
                 document.addEventListener('DOMContentLoaded', function() {
-                    function formatNumber(num) {
-                        return num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                    }
-
                     const ingestTableData = [{
                         type: 'table',
                         header: {
@@ -1285,7 +1396,6 @@ function downloadHTML(data, filename, accountId) {
         `;
     }
 
-
     const htmlContent = `
 <!DOCTYPE html>
 <html lang="en">
@@ -1302,7 +1412,7 @@ function downloadHTML(data, filename, accountId) {
 </head>
 <body>
     <h1>Consumption Report for Account # ${accountId}</h1>
-    ${generateSummaryTable(data.ingest, data.users, data.compute)}
+    ${generateSummaryTable(data.ingest, data.users, data.compute, data.enr, data.synthetics, data.core, data.advanced)}
     ${data.ingest ? generateIngestHTML(data.ingest) : ''}
     ${data.users ? generateUsersHTML(data.users) : ''}
     ${data.compute ? generateComputeHTML(data.compute) : ''}
@@ -1477,7 +1587,7 @@ function addExportControls() {
                     const tagKey = tagKeyInput.value || 'appid';
                     await exportFunction(cookie, tagKey, selectedDomain);
                 } else if (selectedFunctionName === "Consumption Report") {
-                    const accountId = parseInt(accountIdInput.value); // Ensure accountId is a number
+                    const accountId = parseInt(getAccountIdFromURL()); // Ensure accountId is a number
                     if (accountId) {
                         await exportFunction(cookie, accountId);
                     } else {
