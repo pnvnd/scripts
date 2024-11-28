@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         New Relic Data Export
 // @namespace    http://newrelic.com
-// @version      4.0.5
+// @version      4.0.6
 // @description  Send NerdGraph request with cookie and export results
 // @author       Peter Nguyen
 // @match        https://one.newrelic.com/*
@@ -987,6 +987,7 @@ async function exportGraphQLToHTML(cookie, accountId) {
             return acc;
         }, {});
 
+        // Sort the months in descending order
         const computeTableData = Object.values(compute).sort((a, b) => new Date(b["Month of timestamp"]) - new Date(a["Month of timestamp"]));
 
         const enr = enrResults.map(row => ({
@@ -1011,13 +1012,13 @@ async function exportGraphQLToHTML(cookie, accountId) {
 
         if (ingest.length > 0 || usersTableData.length > 0 || computeTableData.length > 0 || enr.length > 0 || synthetics.length > 0 || core.length > 0 || advanced.length > 0) {
             const combinedData = {
-                ingest: ingest.length > 0 ? ingest : null,
-                users: usersTableData.length > 0 ? usersTableData : null,
-                compute: computeTableData.length > 0 ? computeTableData : null,
-                enr: enr.length > 0 ? enr : null,
-                synthetics: synthetics.length > 0 ? synthetics : null,
-                core: core.length > 0 ? core : null,
-                advanced: advanced.length > 0 ? advanced : null
+                ingest: ingest.length > 0 ? ingest : [],
+                users: usersTableData.length > 0 ? usersTableData : [],
+                compute: computeTableData.length > 0 ? computeTableData : [],
+                enr: enr.length > 0 ? enr : [],
+                synthetics: synthetics.length > 0 ? synthetics : [],
+                core: core.length > 0 ? core : [],
+                advanced: advanced.length > 0 ? advanced : []
             };
 
             // Get the current date
@@ -1033,7 +1034,7 @@ async function exportGraphQLToHTML(cookie, accountId) {
             createToaster('No data available for export.', 'error');
         }
     } catch (error) {
-        createToaster(`GraphQL query failed: ${error.message}`, 'error');
+        createToaster(`${error.message}`, 'error');
     }
 }
 
@@ -1041,6 +1042,63 @@ async function exportGraphQLToHTML(cookie, accountId) {
 function downloadHTML(data, filename, accountId) {
     function formatNumber(num) {
         return num.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    }
+
+    function estimateCCU(computeData, coreData, enrData, syntheticsData) {
+        // Sort data by "Month of timestamp" in descending order
+        const sortedComputeData = computeData.sort((a, b) => new Date(b["Month of timestamp"]) - new Date(a["Month of timestamp"]));
+
+        // Calculate the average of "Legacy CCUs" for the last 5 months excluding the most recent one
+        let legacyCCUAverage = 0;
+        let legacyCCUBuffer = 0;
+        const monthsToConsider = Math.min(sortedComputeData.length - 1, 5); // Number of months to consider, up to 5, excluding the most recent one
+
+        if (monthsToConsider > 0) {
+            const legacyCCUsLastMonths = sortedComputeData.slice(1, 1 + monthsToConsider).map(month => month["Legacy CCUs"]);
+            legacyCCUAverage = legacyCCUsLastMonths.reduce((sum, ccus) => sum + ccus, 0) / legacyCCUsLastMonths.length;
+            legacyCCUBuffer = Math.max(...legacyCCUsLastMonths) - legacyCCUAverage;
+        }
+
+        const sortedCoreData = coreData.sort((a, b) => new Date(b["Month of timestamp"]) - new Date(a["Month of timestamp"]));
+        let coreCCUAverage = 0;
+        const coreMonthsToConsider = Math.min(sortedCoreData.length - 1, 3);
+        if (coreMonthsToConsider > 0) {
+            const coreCCUsLastMonths = sortedCoreData.slice(1, 1 + coreMonthsToConsider).map(month => month["CCUs Used"]);
+            coreCCUAverage = coreCCUsLastMonths.reduce((sum, ccus) => sum + ccus, 0) / coreCCUsLastMonths.length;
+        }
+
+        const sortedEnrData = enrData.sort((a, b) => new Date(b["Month of timestamp"]) - new Date(a["Month of timestamp"]));
+        let enrCCUAverage = 0;
+        let enrCCUBuffer = 0;
+        const enrMonthsToConsider = Math.min(sortedEnrData.length - 1, 5);
+        if (enrMonthsToConsider > 0) {
+            const enrCCUsLastMonths = sortedEnrData.slice(1, 1 + enrMonthsToConsider).map(month => month["CCUs Used"]);
+            enrCCUAverage = enrCCUsLastMonths.reduce((sum, ccus) => sum + ccus, 0) / enrCCUsLastMonths.length;
+            enrCCUBuffer = Math.max(...enrCCUsLastMonths) - enrCCUAverage;
+        }
+
+        const sortedSyntheticsData = syntheticsData.sort((a, b) => new Date(b["Month of timestamp"]) - new Date(a["Month of timestamp"]));
+        let syntheticsCCUAverage = 0;
+        let syntheticsCCUBuffer = 0;
+        const syntheticsMonthsToConsider = Math.min(sortedSyntheticsData.length - 1, 3);
+        if (syntheticsMonthsToConsider > 0) {
+            const syntheticsCCUsLastMonths = sortedSyntheticsData.slice(1, 1 + syntheticsMonthsToConsider).map(month => month["CCUs Used"]);
+            syntheticsCCUAverage = syntheticsCCUsLastMonths.reduce((sum, ccus) => sum + ccus, 0) / syntheticsCCUsLastMonths.length;
+            syntheticsCCUBuffer = Math.max(...syntheticsCCUsLastMonths) - syntheticsCCUAverage;
+        }
+
+        const coreCCU = enrCCUBuffer+syntheticsCCUBuffer;
+        const swing = legacyCCUBuffer+coreCCU;
+        const maxCoreCCU = coreCCUAverage+swing
+
+        return {
+            legacyCCUAverage: formatNumber(legacyCCUAverage),
+            legacyCCUBuffer: formatNumber(legacyCCUBuffer),
+            coreCCUAverage: formatNumber(coreCCUAverage),
+            coreCCU: formatNumber(coreCCU),
+            swing: formatNumber(swing),
+            maxCoreCCU: formatNumber(maxCoreCCU)
+        };
     }
 
     function generateSummaryTable(ingestData, usersData, computeData, enrData, syntheticsData, coreData, advancedData) {
@@ -1126,6 +1184,7 @@ function downloadHTML(data, filename, accountId) {
         return `
             <h2>Summary</h2>
             <div id="summaryTable"></div>
+            <div id="groupedBarChart"></div>
             <script>
                 document.addEventListener('DOMContentLoaded', function() {
                     const summaryTableData = [{
@@ -1146,7 +1205,41 @@ function downloadHTML(data, filename, accountId) {
                         }
                     }];
 
+                    const xData = summaryTableData[0].cells.values[0]; // Extract the x-axis data (Months)
+                    const legacyCCUs = summaryTableData[0].cells.values[1]; // Extract Legacy CCUs data
+                    const coreCCUs = summaryTableData[0].cells.values[2]; // Extract Core CCUs data
+                    const advancedCCUs = summaryTableData[0].cells.values[3]; // Extract Advanced CCUs data
+
+                    const data = [
+                        {
+                            x: xData,
+                            y: legacyCCUs,
+                            name: 'Legacy CCUs',
+                            type: 'bar'
+                        },
+                        {
+                            x: xData,
+                            y: coreCCUs,
+                            name: 'Core CCUs',
+                            type: 'bar'
+                        },
+                        {
+                            x: xData,
+                            y: advancedCCUs,
+                            name: 'Advanced CCUs',
+                            type: 'bar'
+                        }
+                    ];
+
+                    const layout = {
+                        barmode: 'group',
+                        title: 'CCUs by Month',
+                        xaxis: { title: 'Month of timestamp' },
+                        yaxis: { title: 'CCUs' }
+                    };
+
                     Plotly.newPlot('summaryTable', summaryTableData);
+                    Plotly.newPlot('groupedBarChart', data, layout);
                 });
             </script>
         `;
@@ -1396,6 +1489,8 @@ function downloadHTML(data, filename, accountId) {
         `;
     }
 
+    const { legacyCCUAverage, legacyCCUBuffer, coreCCUAverage, coreCCU, swing, maxCoreCCU } = estimateCCU(data.compute, data.core, data.enr, data.synthetics);
+
     const htmlContent = `
 <!DOCTYPE html>
 <html lang="en">
@@ -1407,11 +1502,55 @@ function downloadHTML(data, filename, accountId) {
         body {
             font-family: Arial, sans-serif;
         }
+        table {
+            width: 25%;
+            border-collapse: collapse;
+        }
+        table, th, td {
+            border: 1px solid black;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+        }
+        td.right-align {
+            text-align: right;
+        }
     </style>
     <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
 </head>
 <body>
     <h1>Consumption Report for Account # ${accountId}</h1>
+    <table>
+        <tr>
+            <td><b>Legacy CCU Average</b></td>
+            <td class="right-align">${legacyCCUAverage}</td>
+        </tr>
+        <tr>
+            <td><b>Legacy CCU Buffer</b></td>
+            <td class="right-align">${legacyCCUBuffer}</td>
+        </tr>
+        <tr>
+            <td><b>Core CCU Average</b></td>
+            <td class="right-align">${coreCCUAverage}</td>
+        </tr>
+        <tr>
+            <td><b>CoreCCU (E&R+Synthetics)</b></td>
+            <td class="right-align">${coreCCU}</td>
+        </tr>
+        <tr>
+            <td><b>Total Swing</b></td>
+            <td class="right-align">${swing}</td>
+        </tr>
+        <tr>
+            <td><b>Core CCU Min (Avg)</b></td>
+            <td class="right-align">${coreCCUAverage}</td>
+        </tr>
+        <tr>
+            <td><b>CoreCCU Max</b></td>
+            <td class="right-align">${maxCoreCCU}</td>
+        </tr>
+    </table>
     ${generateSummaryTable(data.ingest, data.users, data.compute, data.enr, data.synthetics, data.core, data.advanced)}
     ${data.ingest ? generateIngestHTML(data.ingest) : ''}
     ${data.users ? generateUsersHTML(data.users) : ''}
