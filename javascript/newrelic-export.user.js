@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         New Relic Data Export
 // @namespace    http://newrelic.com
-// @version      4.0.6
+// @version      4.0.7
 // @description  Send NerdGraph request with cookie and export results
 // @author       Peter Nguyen
 // @match        https://one.newrelic.com/*
@@ -1169,6 +1169,13 @@ function downloadHTML(data, filename, accountId) {
         const summaryTableData = Object.values(combinedData).sort((a, b) => new Date(a["Month of timestamp"]) - new Date(b["Month of timestamp"]));
 
         function generateSummaryTableHTML(tableData) {
+            if (!tableData || tableData.length === 0) {
+                return {
+                    headers: ["Month of timestamp", "Legacy CCUs", "Core CCUs", "Advanced CCUs", "Alert CCUs", "Dashboard CCUs", "E&R CCUs", "Synthetics CCUs", "Total Users", "Full Users", "Core Users", "Basic Users", "Data (GB)"].map(header => `<b>${header}</b>`),
+                    data: []
+                };
+            }
+
             const headers = ["Month of timestamp", "Legacy CCUs", "Core CCUs", "Advanced CCUs", "Alert CCUs", "Dashboard CCUs", "E&R CCUs", "Synthetics CCUs", "Total Users", "Full Users", "Core Users", "Basic Users", "Data (GB)"];
             const headerNames = headers.map(header => `<b>${header}</b>`);
             const tableDataValues = headers.map(header => tableData.map(row => formatNumber(row[header] || 0)));
@@ -1350,6 +1357,13 @@ function downloadHTML(data, filename, accountId) {
     }
 
     function generateUsersHTML(usersData) {
+        if (!usersData || usersData.length === 0) {
+            return {
+                headers: ["Month of timestamp", "Legacy CCUs", "Core CCUs", "Advanced CCUs", "Alert CCUs", "Dashboard CCUs", "E&R CCUs", "Synthetics CCUs", "Total Users", "Full Users", "Core Users", "Basic Users", "Data (GB)"].map(header => `<b>${header}</b>`),
+                data: []
+            };
+        }
+
         // Extract headers and ensure "Total Users" is the rightmost column
         const headers = Object.keys(usersData[0]);
         const totalUsersIndex = headers.indexOf("Total Users");
