@@ -1,24 +1,25 @@
 // ==UserScript==
 // @name         New Relic Data Export
 // @namespace    http://newrelic.com
-// @version      4.0.7
+// @version      4.1.0
 // @description  Send NerdGraph request with cookie and export results
-// @author       Peter Nguyen
+// @author       Peter Nguyen, Matt Swanson
 // @match        https://one.newrelic.com/*
 // @match        https://one.eu.newrelic.com/*
 // @icon         https://newrelic.com/favicon.ico
 // @grant        none
-// @downloadURL  https://github.com/pnvnd/scripts/raw/refs/heads/master/javascript/newrelic-export.user.js
-// @updateURL    https://github.com/pnvnd/scripts/raw/refs/heads/master/javascript/newrelic-export.user.js
 // ==/UserScript==
 
 (function() {
     'use strict';
 
+// Determine the New Relic domain based on the current URL
+const newrelicURL = window.location.host.includes('one.eu.newrelic.com')
+    ? 'https://one.eu.newrelic.com'
+    : 'https://one.newrelic.com';
+
 // Determine the NerdGraph endpoint based on the current URL
-const nerdgraphEndpoint = window.location.host.includes('one.eu.newrelic.com')
-    ? 'https://one.eu.newrelic.com/graphql'
-    : 'https://one.newrelic.com/graphql';
+const nerdgraphEndpoint = newrelicURL +'/graphql';
 
 /********************
  * Helper Functions *
@@ -267,6 +268,103 @@ async function exportEntities(cookie, tagKey="", domain="APM") {
         createToaster(domain + ' Entities exported successfully!', 'success');
     } catch (err) {
         createToaster(`Error: ${err.message}`);
+    }
+}
+
+// Get MS Teams webhooks for every account
+async function exportWebhooks(cookie) {
+    let allEntities = []; // Initialize an array to hold all entities
+    const accounts = await getAccounts(cookie);
+    if (!accounts) {
+        console.log('Failed to retrieve accounts.');
+        return;
+    }
+    for (const account of accounts) {
+        try {
+            const nerdgraphQuery = `
+               query exportDestinations($accountId: Int!){
+    actor {
+        account(id: $accountId) {
+          aiNotifications {
+            destinations(filters: {type: WEBHOOK, property: {key: "url", value: "office.com"}, active: true}) {
+              entities {
+                accountId
+                id
+                name
+                createdAt
+                updatedAt
+                properties {
+                  key
+                  value
+                }
+                guid
+              }
+              error {
+                details
+              }
+            }
+          }
+        }
+    }
+}
+            `;
+            console.log('NG Query'+nerdgraphQuery);
+
+            const response = await fetch(nerdgraphEndpoint, {
+                method: 'POST',
+                headers: {
+                    'content-type': 'application/json; charset=utf-8',
+                    'cookie': cookie,
+                    'newrelic-requesting-services': 'platform'
+                },
+                body: JSON.stringify({
+                    query: nerdgraphQuery,
+                    variables: { accountId: account.id }
+                })
+            });
+
+            const nerdgraph = await response.json();
+            const destinations = nerdgraph.data.actor.account.aiNotifications.destinations.entities;
+
+            // Process and flatten each destination before adding to allEntities array
+            for (const destination of destinations) {
+
+                // the return structure contains an array of properties and we need to find the url value and set it in the return flattended destination
+                // mds - 1.23.2025
+                const properties_array = destination.properties;
+                const urlObject = properties_array.find(item => item.key === "url");
+                const urlValue = urlObject ? urlObject.value : "no url found";
+
+                //mds - 1.23.2025
+                //determine if it's old or new ms teams url structure (using this for source of structure since MSFT doesn't have anything authoritative: https://feedbackportal.microsoft.com/feedback/idea/80ed6877-b642-ef11-b4ad-000d3a7aba8b)
+                //count the number of / found in the URL - best I can tell if we see below it tells us if a URL is new or old format:
+                //OLD Format (7 /'s): https://{subdomain}.webhook.office.com/webhook/long_alphanumeric1/IncomingWebhook/long_alphanumeric2/long_alphanumeric3
+                //NEW Format (8 /'s):: https://{subdomain}.webhook.office.com/webhook/long_alphanumeric1/IncomingWebhook/long_alphanumeric2/long_alphanumeric3/long_alphanumeric4
+                const slash_count = urlValue.split("/").length - 1; //grab the number of /'s
+                const upgrade = (slash_count === 8) ? false : true; //if it's 8 then we don't need an upgrade, otherwise it might need an upgrade
+
+                const flattenedDestination = {
+                    accountid: destination.accountId,
+                    id: destination.id,
+                    created_at: destination.createdAt,
+                    updated_at: destination.updatedAt,
+                    name: destination.name,
+                    upgrade_needed: upgrade,
+                    edit_webhook: newrelicURL+'/redirect/entity/'+destination.guid+'?account='+destination.accountId,
+                    webhook_url: urlValue
+                    };
+                allEntities.push(flattenedDestination);
+            }
+        } catch (err) {
+            console.log('Error fetching destinations for account ' + account.id + ': ' + err.message);
+        }
+    }
+    // Once all data is collected, download it as CSV
+    if (allEntities.length > 0) {
+        downloadCSV(allEntities, 'destinations_webhooks.csv');
+        createToaster('Destinations exported successfully!', 'success');
+    } else {
+        createToaster(`Error: No destinations found`);
     }
 }
 
@@ -808,8 +906,8 @@ async function exportNrqlConditions(cookie) {
     }
 }
 
-async function exportGraphQLToHTML(cookie, accountId) {
-    const nerdgraphQuery = `
+async function exportGraphQLToHTML(cookie, accountId, ccuType) {
+    const Type1 = `
     query getNrqlQuery($accountId: Int!) {
       actor {
         account(id: $accountId) {
@@ -818,11 +916,9 @@ async function exportGraphQLToHTML(cookie, accountId) {
             query: """
             SELECT sum(GigabytesIngested) AS 'Data Ingested'
             FROM NrConsumption
-            WHERE productLine = 'DataPlatform'
-            AND (version = '0.4.2' OR nr.customerStructure='customer_contract')
-            AND consumingAccountId IS NOT NULL
+            WHERE metric IN ('GigabytesIngested')
             FACET consumingAccountName, monthOf(timestamp), usageMetric
-            SINCE '2023-10-01 00:00:00'
+            SINCE 1 YEAR AGO
             LIMIT MAX
             """
           ) {
@@ -831,28 +927,58 @@ async function exportGraphQLToHTML(cookie, accountId) {
           users: nrql(
             timeout: 90
             query: """
-            SELECT latest(consumption)
+            SELECT max(consumption)
             FROM NrConsumption
-            WHERE metric IN ('BasicUsers', 'FullPlatformUsers', 'CoreUsers')
+            WHERE metric IN ('BasicUsers', 'CoreUsers', 'FullPlatformUsers')
             FACET metric, monthOf(timestamp)
-            SINCE '2023-10-01 00:00:00'
+            SINCE 1 YEAR AGO
             LIMIT MAX
             """
           ) {
             results
           }
-          compute: nrql(
+          computeOriginal: nrql(
             timeout: 90
             query: """
             SELECT sum(consumption) AS 'CCUs'
             FROM NrConsumption
             WHERE metric IN ('CCU', 'CoreCCU')
-            AND dimension_productCapability != 'Synthetics'
-            AND dimension_computeType != 'Entity Writes'
-            AND dimension_computeType != 'Entity Lookups'
-            AND dimension_computeType != 'Entity Relationships'
-            SINCE '2023-10-01 00:00:00'
+            AND dimension_dataCategory != 'LiveArchive'
+            AND dimension_productCapability NOT IN ('Synthetics', 'IAST')
+            AND dimension_productCapability NOT LIKE 'Entities & Relationships%'
+            AND dimension_computeType NOT LIKE 'Entity%'
+            SINCE 1 YEAR AGO
             FACET dimension_productCapability, monthOf(timestamp)
+            LIMIT MAX
+            """
+          ) {
+            results
+          }
+          computeCore: nrql(
+            timeout: 90
+            query: """
+            FROM NrConsumption
+            SELECT sum(consumption) AS 'CCUs'
+            WHERE metric = 'CoreCCU'
+            AND dimension_dataCategory != 'LiveArchive'
+            AND dimension_productCapability != 'IAST'
+            AND timestamp >= 1727733600000
+            SINCE 1 YEAR AGO
+            FACET monthOf(timestamp)
+            LIMIT MAX
+            """
+          ) {
+            results
+          }
+          computeAdvanced: nrql(
+            timeout: 90
+            query: """
+            SELECT sum(consumption) AS 'CCUs'
+            FROM NrConsumption
+            WHERE metric = 'AdvancedCCU'
+            AND timestamp >= 1727733600000
+            SINCE 1 YEAR AGO
+            FACET monthOf(timestamp)
             LIMIT MAX
             """
           ) {
@@ -861,12 +987,14 @@ async function exportGraphQLToHTML(cookie, accountId) {
           enr: nrql(
             timeout: 90
             query: """
-            SELECT sum(consumption + ignoredConsumption) AS 'CCUs Used'
+            SELECT sum(consumption) AS 'CCUs'
             FROM NrConsumption
-            WHERE metric IN ('CCU', 'UnbilledCCU', 'CoreCCU')
-            AND (dimension_computeType IN ('Entity Writes', 'Entity Lookups', 'Entity Relationships')
-            OR dimension_productCapability IN ('ENTITIES_AND_RELATIONSHIPS', 'Entities & Relationships'))
-            SINCE '2024-05-01'
+            WHERE metric = 'CoreCCU'
+            AND (dimension_computeType LIKE 'Entity%'
+            OR dimension_productCapability = 'ENTITIES_AND_RELATIONSHIPS'
+            OR dimension_productCapability LIKE 'Entities & Relationships%')
+            AND timestamp >= 1727733600000
+            SINCE 1 YEAR AGO
             FACET monthOf(timestamp)
             LIMIT MAX
             """
@@ -876,41 +1004,13 @@ async function exportGraphQLToHTML(cookie, accountId) {
           synthetics: nrql(
             timeout: 90
             query: """
-            SELECT sum(consumption + ignoredConsumption) AS 'CCUs Used'
+            SELECT sum(consumption) AS 'CCUs'
             FROM NrConsumption
-            WHERE metric IN ('CCU', 'UnbilledCCU', 'CoreCCU')
+            WHERE metric = 'CoreCCU'
             AND dimension_productCapability = 'Synthetics'
-            AND dimension_computeType != 'Entity Writes'
-            AND dimension_computeType != 'Entity Lookups'
-            AND dimension_computeType != 'Entity Relationships'
-            SINCE '2024-09-01'
-            FACET monthOf(timestamp)
-            LIMIT MAX
-            """
-          ) {
-            results
-          }
-          core: nrql(
-            timeout: 90
-            query: """
-            FROM NrConsumption
-            SELECT sum(consumption + ignoredConsumption) AS 'CCUs Used'
-            WHERE metric IN ('CCU', 'UnbilledCCU', 'CoreCCU')
-            SINCE '2024-08-01'
-            FACET monthOf(timestamp)
-            LIMIT MAX
-            """
-          ) {
-            results
-          }
-          advanced: nrql(
-            timeout: 90
-            query: """
-            SELECT sum(consumption) AS 'CCUs Used'
-            FROM NrConsumption
-            WHERE metric IN ('AdvancedCCU', 'CCU')
-            AND (dimension_dataCategory = 'LiveArchive' OR dimension_productCapability = 'IAST')
-            SINCE '2024-04-01'
+            AND dimension_computeType NOT LIKE 'Entity%'
+            AND timestamp >= 1727733600000
+            SINCE 1 YEAR AGO
             FACET monthOf(timestamp)
             LIMIT MAX
             """
@@ -921,6 +1021,605 @@ async function exportGraphQLToHTML(cookie, accountId) {
       }
     }
     `;
+
+    const Type2 = `
+    query getNrqlQuery($accountId: Int!) {
+      actor {
+        account(id: $accountId) {
+          ingest: nrql(
+            timeout: 90
+            query: """
+            SELECT sum(GigabytesIngested) AS 'Data Ingested'
+            FROM NrConsumption
+            WHERE metric IN ('GigabytesIngested')
+            FACET consumingAccountName, monthOf(timestamp), usageMetric
+            SINCE 1 YEAR AGO
+            LIMIT MAX
+            """
+          ) {
+            results
+          }
+          users: nrql(
+            timeout: 90
+            query: """
+            SELECT max(consumption)
+            FROM NrConsumption
+            WHERE metric IN ('BasicUsers', 'CoreUsers', 'FullPlatformUsers')
+            FACET metric, monthOf(timestamp)
+            SINCE 1 YEAR AGO
+            LIMIT MAX
+            """
+          ) {
+            results
+          }
+          computeOriginal: nrql(
+            timeout: 90
+            query: """
+            SELECT sum(consumption) AS 'CCUs'
+            FROM NrConsumption
+            WHERE metric = 'CCU'
+            AND dimension_dataCategory != 'LiveArchive'
+            AND dimension_productCapability NOT IN ('Synthetics', 'IAST')
+            AND dimension_productCapability NOT LIKE 'Entities & Relationships%'
+            AND dimension_computeType NOT LIKE 'Entity%'
+            SINCE 1 YEAR AGO
+            FACET dimension_productCapability, monthOf(timestamp)
+            LIMIT MAX
+            """
+          ) {
+            results
+          }
+          computeCore: nrql(
+            timeout: 90
+            query: """
+            FROM NrConsumption
+            SELECT sum(consumption) AS 'CCUs'
+            WHERE metric = 'CoreCCU'
+            AND dimension_dataCategory != 'LiveArchive'
+            AND dimension_productCapability != 'IAST'
+            AND timestamp >= 1727733600000
+            SINCE 1 YEAR AGO
+            FACET monthOf(timestamp)
+            LIMIT MAX
+            """
+          ) {
+            results
+          }
+          computeAdvanced: nrql(
+            timeout: 90
+            query: """
+            SELECT sum(consumption) AS 'CCUs'
+            FROM NrConsumption
+            WHERE metric = 'AdvancedCCU'
+            AND timestamp >= 1727733600000
+            SINCE 1 YEAR AGO
+            FACET monthOf(timestamp)
+            LIMIT MAX
+            """
+          ) {
+            results
+          }
+          enr: nrql(
+            timeout: 90
+            query: """
+            SELECT sum(consumption) AS 'CCUs'
+            FROM NrConsumption
+            WHERE metric = 'CoreCCU'
+            AND (dimension_computeType LIKE 'Entity%'
+            OR dimension_productCapability = 'ENTITIES_AND_RELATIONSHIPS'
+            OR dimension_productCapability LIKE 'Entities & Relationships%')
+            AND timestamp >= 1727733600000
+            SINCE 1 YEAR AGO
+            FACET monthOf(timestamp)
+            LIMIT MAX
+            """
+          ) {
+            results
+          }
+          synthetics: nrql(
+            timeout: 90
+            query: """
+            SELECT sum(consumption) AS 'CCUs'
+            FROM NrConsumption
+            WHERE metric = 'CoreCCU'
+            AND dimension_productCapability = 'Synthetics'
+            AND dimension_computeType NOT LIKE 'Entity%'
+            AND timestamp >= 1727733600000
+            SINCE 1 YEAR AGO
+            FACET monthOf(timestamp)
+            LIMIT MAX
+            """
+          ) {
+            results
+          }
+        }
+      }
+    }
+    `;
+
+    const Type3 = `
+    query getNrqlQuery($accountId: Int!) {
+      actor {
+        account(id: $accountId) {
+          ingest: nrql(
+            timeout: 90
+            query: """
+            SELECT sum(GigabytesIngested) AS 'Data Ingested'
+            FROM NrConsumption
+            WHERE metric IN ('GigabytesIngested')
+            FACET consumingAccountName, monthOf(timestamp), usageMetric
+            SINCE 1 YEAR AGO
+            LIMIT MAX
+            """
+          ) {
+            results
+          }
+          users: nrql(
+            timeout: 90
+            query: """
+            SELECT max(consumption)
+            FROM NrConsumption
+            WHERE metric IN ('BasicUsers', 'CoreUsers', 'FullPlatformUsers')
+            FACET metric, monthOf(timestamp)
+            SINCE 1 YEAR AGO
+            LIMIT MAX
+            """
+          ) {
+            results
+          }
+          computeOriginal: nrql(
+            timeout: 90
+            query: """
+            SELECT sum(consumption) AS 'CCUs'
+            FROM NrConsumption
+            WHERE metric IN ('CCU', 'CoreCCU')
+            AND dimension_dataCategory != 'LiveArchive'
+            AND dimension_productCapability NOT IN ('Synthetics', 'IAST')
+            AND dimension_productCapability NOT LIKE 'Entities & Relationships%'
+            AND dimension_computeType NOT LIKE 'Entity%'
+            SINCE 1 YEAR AGO
+            FACET dimension_productCapability, monthOf(timestamp)
+            LIMIT MAX
+            """
+          ) {
+            results
+          }
+          computeCore: nrql(
+            timeout: 90
+            query: """
+            FROM NrConsumption
+            SELECT sum(consumption) AS 'CCUs'
+            WHERE metric = 'CoreCCU'
+            AND dimension_dataCategory != 'LiveArchive'
+            AND dimension_productCapability != 'IAST'
+            AND timestamp >= 1727733600000
+            SINCE 1 YEAR AGO
+            FACET monthOf(timestamp)
+            LIMIT MAX
+            """
+          ) {
+            results
+          }
+          computeAdvanced: nrql(
+            timeout: 90
+            query: """
+            SELECT sum(consumption) AS 'CCUs'
+            FROM NrConsumption
+            WHERE metric = 'AdvancedCCU'
+            AND timestamp >= 1727733600000
+            SINCE 1 YEAR AGO
+            FACET monthOf(timestamp)
+            LIMIT MAX
+            """
+          ) {
+            results
+          }
+          enr: nrql(
+            timeout: 90
+            query: """
+            SELECT sum(consumption) AS 'CCUs'
+            FROM NrConsumption
+            WHERE metric = 'CoreCCU'
+            AND (dimension_computeType LIKE 'Entity%'
+            OR dimension_productCapability = 'ENTITIES_AND_RELATIONSHIPS'
+            OR dimension_productCapability LIKE 'Entities & Relationships%')
+            AND timestamp >= 1727733600000
+            SINCE 1 YEAR AGO
+            FACET monthOf(timestamp)
+            LIMIT MAX
+            """
+          ) {
+            results
+          }
+          synthetics: nrql(
+            timeout: 90
+            query: """
+            SELECT sum(consumption) AS 'CCUs'
+            FROM NrConsumption
+            WHERE metric = 'CoreCCU'
+            AND dimension_productCapability = 'Synthetics'
+            AND dimension_computeType NOT LIKE 'Entity%'
+            AND timestamp >= 1727733600000
+            SINCE 1 YEAR AGO
+            FACET monthOf(timestamp)
+            LIMIT MAX
+            """
+          ) {
+            results
+          }
+        }
+      }
+    }
+    `;
+
+    const Type4 = `
+    query getNrqlQuery($accountId: Int!) {
+      actor {
+        account(id: $accountId) {
+          ingest: nrql(
+            timeout: 90
+            query: """
+            SELECT sum(GigabytesIngested) AS 'Data Ingested'
+            FROM NrConsumption
+            WHERE metric IN ('GigabytesIngested')
+            FACET consumingAccountName, monthOf(timestamp), usageMetric
+            SINCE 1 YEAR AGO
+            LIMIT MAX
+            """
+          ) {
+            results
+          }
+          users: nrql(
+            timeout: 90
+            query: """
+            SELECT max(consumption)
+            FROM NrConsumption
+            WHERE metric IN ('BasicUsers', 'CoreUsers', 'FullPlatformUsers')
+            FACET metric, monthOf(timestamp)
+            SINCE 1 YEAR AGO
+            LIMIT MAX
+            """
+          ) {
+            results
+          }
+          computeOriginal: nrql(
+            timeout: 90
+            query: """
+            SELECT sum(consumption) AS 'CCUs'
+            FROM NrConsumption
+            WHERE metric = 'CCU'
+            AND dimension_dataCategory != 'LiveArchive'
+            AND dimension_productCapability NOT IN ('Synthetics', 'IAST')
+            AND dimension_productCapability NOT LIKE 'Entities & Relationships%'
+            AND dimension_computeType NOT LIKE 'Entity%'
+            SINCE 1 YEAR AGO
+            FACET dimension_productCapability, monthOf(timestamp)
+            LIMIT MAX
+            """
+          ) {
+            results
+          }
+          computeCore: nrql(
+            timeout: 90
+            query: """
+            FROM NrConsumption
+            SELECT sum(consumption) AS 'CCUs'
+            WHERE metric = 'CoreCCU'
+            AND dimension_dataCategory != 'LiveArchive'
+            AND dimension_productCapability != 'IAST'
+            AND timestamp >= 1727733600000
+            SINCE 1 YEAR AGO
+            FACET monthOf(timestamp)
+            LIMIT MAX
+            """
+          ) {
+            results
+          }
+          computeAdvanced: nrql(
+            timeout: 90
+            query: """
+            SELECT sum(consumption) AS 'CCUs'
+            FROM NrConsumption
+            WHERE metric = 'AdvancedCCU'
+            AND timestamp >= 1727733600000
+            SINCE 1 YEAR AGO
+            FACET monthOf(timestamp)
+            LIMIT MAX
+            """
+          ) {
+            results
+          }
+          enr: nrql(
+            timeout: 90
+            query: """
+            SELECT sum(consumption) AS 'CCUs'
+            FROM NrConsumption
+            WHERE metric = 'CoreCCU'
+            AND (dimension_computeType LIKE 'Entity%'
+            OR dimension_productCapability = 'ENTITIES_AND_RELATIONSHIPS'
+            OR dimension_productCapability LIKE 'Entities & Relationships%')
+            AND timestamp >= 1727733600000
+            SINCE 1 YEAR AGO
+            FACET monthOf(timestamp)
+            LIMIT MAX
+            """
+          ) {
+            results
+          }
+          synthetics: nrql(
+            timeout: 90
+            query: """
+            SELECT sum(consumption) AS 'CCUs'
+            FROM NrConsumption
+            WHERE metric = 'CoreCCU'
+            AND dimension_productCapability = 'Synthetics'
+            AND dimension_computeType NOT LIKE 'Entity%'
+            AND timestamp >= 1727733600000
+            SINCE 1 YEAR AGO
+            FACET monthOf(timestamp)
+            LIMIT MAX
+            """
+          ) {
+            results
+          }
+        }
+      }
+    }
+    `;
+
+    const Type5 = `
+    query getNrqlQuery($accountId: Int!) {
+      actor {
+        account(id: $accountId) {
+          ingest: nrql(
+            timeout: 90
+            query: """
+            SELECT sum(GigabytesIngested) AS 'Data Ingested'
+            FROM NrConsumption
+            WHERE metric IN ('GigabytesIngested')
+            FACET consumingAccountName, monthOf(timestamp), usageMetric
+            SINCE 1 YEAR AGO
+            LIMIT MAX
+            """
+          ) {
+            results
+          }
+          users: nrql(
+            timeout: 90
+            query: """
+            SELECT max(consumption)
+            FROM NrConsumption
+            WHERE metric IN ('BasicUsers', 'CoreUsers', 'FullPlatformUsers')
+            FACET metric, monthOf(timestamp)
+            SINCE 1 YEAR AGO
+            LIMIT MAX
+            """
+          ) {
+            results
+          }
+          computeOriginal: nrql(
+            timeout: 90
+            query: """
+            SELECT sum(consumption + ignoredConsumption) AS 'CCUs'
+            FROM NrConsumption
+            WHERE metric IN ('CCU', 'CoreCCU')
+            AND dimension_dataCategory != 'LiveArchive'
+            AND dimension_productCapability NOT IN ('Synthetics', 'IAST')
+            AND dimension_productCapability NOT LIKE 'Entities & Relationships%'
+            AND dimension_computeType NOT LIKE 'Entity%'
+            SINCE 1 YEAR AGO
+            FACET dimension_productCapability, monthOf(timestamp)
+            LIMIT MAX
+            """
+          ) {
+            results
+          }
+          computeCore: nrql(
+            timeout: 90
+            query: """
+            FROM NrConsumption
+            SELECT sum(consumption + ignoredConsumption) AS 'CCUs'
+            WHERE metric = 'CoreCCU'
+            AND dimension_dataCategory != 'LiveArchive'
+            AND dimension_productCapability != 'IAST'
+            AND timestamp >= 1727733600000
+            SINCE 1 YEAR AGO
+            FACET monthOf(timestamp)
+            LIMIT MAX
+            """
+          ) {
+            results
+          }
+          computeAdvanced: nrql(
+            timeout: 90
+            query: """
+            SELECT sum(consumption) AS 'CCUs'
+            FROM NrConsumption
+            WHERE metric = 'AdvancedCCU'
+            AND timestamp >= 1727733600000
+            SINCE 1 YEAR AGO
+            FACET monthOf(timestamp)
+            LIMIT MAX
+            """
+          ) {
+            results
+          }
+          enr: nrql(
+            timeout: 90
+            query: """
+            SELECT sum(consumption + ignoredConsumption) AS 'CCUs'
+            FROM NrConsumption
+            WHERE metric = 'CoreCCU'
+            AND (dimension_computeType LIKE 'Entity%'
+            OR dimension_productCapability = 'ENTITIES_AND_RELATIONSHIPS'
+            OR dimension_productCapability LIKE 'Entities & Relationships%')
+            AND timestamp >= 1727733600000
+            SINCE 1 YEAR AGO
+            FACET monthOf(timestamp)
+            LIMIT MAX
+            """
+          ) {
+            results
+          }
+          synthetics: nrql(
+            timeout: 90
+            query: """
+            SELECT sum(consumption + ignoredConsumption) AS 'CCUs'
+            FROM NrConsumption
+            WHERE metric = 'CoreCCU'
+            AND dimension_productCapability = 'Synthetics'
+            AND dimension_computeType NOT LIKE 'Entity%'
+            AND timestamp >= 1727733600000
+            SINCE 1 YEAR AGO
+            FACET monthOf(timestamp)
+            LIMIT MAX
+            """
+          ) {
+            results
+          }
+        }
+      }
+    }
+    `;
+
+    const Type6 = `
+    query getNrqlQuery($accountId: Int!) {
+      actor {
+        account(id: $accountId) {
+          ingest: nrql(
+            timeout: 90
+            query: """
+            SELECT sum(GigabytesIngested) AS 'Data Ingested'
+            FROM NrConsumption
+            WHERE metric IN ('GigabytesIngested')
+            FACET consumingAccountName, monthOf(timestamp), usageMetric
+            SINCE 1 YEAR AGO
+            LIMIT MAX
+            """
+          ) {
+            results
+          }
+          users: nrql(
+            timeout: 90
+            query: """
+            SELECT max(consumption)
+            FROM NrConsumption
+            WHERE metric IN ('BasicUsers', 'CoreUsers', 'FullPlatformUsers')
+            FACET metric, monthOf(timestamp)
+            SINCE 1 YEAR AGO
+            LIMIT MAX
+            """
+          ) {
+            results
+          }
+          computeOriginal: nrql(
+            timeout: 90
+            query: """
+            SELECT sum(consumption + ignoredConsumption) AS 'CCUs'
+            FROM NrConsumption
+            WHERE metric IN ('CCU', 'CoreCCU')
+            AND dimension_dataCategory != 'LiveArchive'
+            AND dimension_productCapability NOT IN ('Synthetics', 'IAST')
+            AND dimension_productCapability NOT LIKE 'Entities & Relationships%'
+            AND dimension_computeType NOT LIKE 'Entity%'
+            SINCE 1 YEAR AGO
+            FACET dimension_productCapability, monthOf(timestamp)
+            LIMIT MAX
+            """
+          ) {
+            results
+          }
+          computeCore: nrql(
+            timeout: 90
+            query: """
+            FROM NrConsumption
+            SELECT sum(consumption + ignoredConsumption) AS 'CCUs'
+            WHERE metric = 'CoreCCU'
+            AND dimension_dataCategory != 'LiveArchive'
+            AND dimension_productCapability != 'IAST'
+            AND timestamp >= 1727733600000
+            SINCE 1 YEAR AGO
+            FACET monthOf(timestamp)
+            LIMIT MAX
+            """
+          ) {
+            results
+          }
+          computeAdvanced: nrql(
+            timeout: 90
+            query: """
+            SELECT sum(consumption) AS 'CCUs'
+            FROM NrConsumption
+            WHERE metric = 'AdvancedCCU'
+            AND timestamp >= 1727733600000
+            SINCE 1 YEAR AGO
+            FACET monthOf(timestamp)
+            LIMIT MAX
+            """
+          ) {
+            results
+          }
+          enr: nrql(
+            timeout: 90
+            query: """
+            SELECT sum(consumption + ignoredConsumption) AS 'CCUs'
+            FROM NrConsumption
+            WHERE metric = 'CoreCCU'
+            AND (dimension_computeType LIKE 'Entity%'
+            OR dimension_productCapability = 'ENTITIES_AND_RELATIONSHIPS'
+            OR dimension_productCapability LIKE 'Entities & Relationships%')
+            AND timestamp >= 1727733600000
+            SINCE 1 YEAR AGO
+            FACET monthOf(timestamp)
+            LIMIT MAX
+            """
+          ) {
+            results
+          }
+          synthetics: nrql(
+            timeout: 90
+            query: """
+            SELECT sum(consumption + ignoredConsumption) AS 'CCUs'
+            FROM NrConsumption
+            WHERE metric = 'CoreCCU'
+            AND dimension_productCapability = 'Synthetics'
+            AND dimension_computeType NOT LIKE 'Entity%'
+            AND timestamp >= 1727733600000
+            SINCE 1 YEAR AGO
+            FACET monthOf(timestamp)
+            LIMIT MAX
+            """
+          ) {
+            results
+          }
+        }
+      }
+    }
+    `;
+
+    let nerdgraphQuery;
+    switch (ccuType) {
+    case "Case 1: User Model to Original Compute":
+        nerdgraphQuery = Type1;
+        break;
+    case "Case 2: Original Compute Renewal":
+        nerdgraphQuery = Type2;
+        break;
+    case "Case 3: User Model to Core Compute":
+        nerdgraphQuery = Type3;
+        break;
+    case "Case 4: Original Compute to Core Compute":
+        nerdgraphQuery = Type4;
+        break;
+    case "Case 5: User Model with Original Compute Add-on":
+        nerdgraphQuery = Type5;
+        break;
+    case "Case 6: User Model with Core Compute Add-on":
+        nerdgraphQuery = Type6;
+        break;
+    default:
+        throw new Error("Unsupported ccuType");
+    }
 
     try {
         const response = await fetch(nerdgraphEndpoint, {
@@ -940,11 +1639,12 @@ async function exportGraphQLToHTML(cookie, accountId) {
 
         const ingestResults = nerdgraph?.data?.actor?.account?.ingest?.results || [];
         const userResults = nerdgraph?.data?.actor?.account?.users?.results || [];
-        const computeResults = nerdgraph?.data?.actor?.account?.compute?.results || [];
+        const computeOriginalResults = nerdgraph?.data?.actor?.account?.computeOriginal?.results || [];
+        const computeCoreResults = nerdgraph?.data?.actor?.account?.computeCore?.results || [];
+        const computeAdvancedResults = nerdgraph?.data?.actor?.account?.computeAdvanced?.results || [];
         const enrResults = nerdgraph?.data?.actor?.account?.enr?.results || [];
         const syntheticsResults = nerdgraph?.data?.actor?.account?.synthetics?.results || [];
-        const coreResults = nerdgraph?.data?.actor?.account?.core?.results || [];
-        const advancedResults = nerdgraph?.data?.actor?.account?.advanced?.results || [];
+
 
         if (ingestResults.length === 0) {
             throw new Error('No results returned from the query.');
@@ -960,16 +1660,16 @@ async function exportGraphQLToHTML(cookie, accountId) {
         const users = userResults.reduce((acc, row) => {
             const [userType, month] = row.facet;
             if (!acc[month]) acc[month] = { "Month of timestamp": month, "Total Users": 0 };
-            acc[month][userType] = row["latest.consumption"];
-            acc[month]["Total Users"] += row["latest.consumption"];
+            acc[month][userType] = row["max.consumption"];
+            acc[month]["Total Users"] += row["max.consumption"];
             return acc;
         }, {});
 
         const usersTableData = Object.values(users).sort((a, b) => new Date(b["Month of timestamp"]) - new Date(a["Month of timestamp"]));
 
-        const compute = computeResults.reduce((acc, row) => {
+        const compute = computeOriginalResults.reduce((acc, row) => {
             const [capability, month] = row.facet;
-            if (!acc[month]) acc[month] = { "Month of timestamp": month, "Legacy CCUs": 0, "Alert CCUs": 0, "Dashboard CCUs": 0 };
+            if (!acc[month]) acc[month] = { "Month of timestamp": month, "Original CCUs": 0, "Alert CCUs": 0, "Dashboard CCUs": 0 };
 
             // Add the capability's CCUs separately
             acc[month][capability] = row.CCUs;
@@ -981,8 +1681,8 @@ async function exportGraphQLToHTML(cookie, accountId) {
                 acc[month]["Dashboard CCUs"] += row.CCUs;
             }
 
-            // Aggregate all CCUs into Legacy CCUs
-            acc[month]["Legacy CCUs"] += row.CCUs;
+            // Aggregate all CCUs into Original CCUs
+            acc[month]["Original CCUs"] += row.CCUs;
 
             return acc;
         }, {});
@@ -990,35 +1690,35 @@ async function exportGraphQLToHTML(cookie, accountId) {
         // Sort the months in descending order
         const computeTableData = Object.values(compute).sort((a, b) => new Date(b["Month of timestamp"]) - new Date(a["Month of timestamp"]));
 
+        const core = computeCoreResults.map(row => ({
+            "Month of timestamp": row.facet,
+            "CCUs": row.CCUs
+        }));
+
+        const advanced = computeAdvancedResults.map(row => ({
+            "Month of timestamp": row.facet,
+            "CCUs": row.CCUs
+        }));
+
         const enr = enrResults.map(row => ({
             "Month of timestamp": row.facet,
-            "CCUs Used": row["CCUs Used"]
+            "CCUs": row.CCUs
         }));
 
         const synthetics = syntheticsResults.map(row => ({
             "Month of timestamp": row.facet,
-            "CCUs Used": row["CCUs Used"]
+            "CCUs": row.CCUs
         }));
 
-        const core = coreResults.map(row => ({
-            "Month of timestamp": row.facet,
-            "CCUs Used": row["CCUs Used"]
-        }));
-
-        const advanced = advancedResults.map(row => ({
-            "Month of timestamp": row.facet,
-            "CCUs Used": row["CCUs Used"]
-        }));
-
-        if (ingest.length > 0 || usersTableData.length > 0 || computeTableData.length > 0 || enr.length > 0 || synthetics.length > 0 || core.length > 0 || advanced.length > 0) {
+        if (ingest.length > 0 || usersTableData.length > 0 || computeTableData.length > 0 || core.length > 0 || advanced.length || enr.length > 0 || synthetics.length > 0) {
             const combinedData = {
                 ingest: ingest.length > 0 ? ingest : [],
                 users: usersTableData.length > 0 ? usersTableData : [],
                 compute: computeTableData.length > 0 ? computeTableData : [],
-                enr: enr.length > 0 ? enr : [],
-                synthetics: synthetics.length > 0 ? synthetics : [],
                 core: core.length > 0 ? core : [],
-                advanced: advanced.length > 0 ? advanced : []
+                advanced: advanced.length > 0 ? advanced : [],
+                enr: enr.length > 0 ? enr : [],
+                synthetics: synthetics.length > 0 ? synthetics : []
             };
 
             // Get the current date
@@ -1048,22 +1748,22 @@ function downloadHTML(data, filename, accountId) {
         // Sort data by "Month of timestamp" in descending order
         const sortedComputeData = computeData.sort((a, b) => new Date(b["Month of timestamp"]) - new Date(a["Month of timestamp"]));
 
-        // Calculate the average of "Legacy CCUs" for the last 5 months excluding the most recent one
-        let legacyCCUAverage = 0;
-        let legacyCCUBuffer = 0;
+        // Calculate the average of "Original CCUs" for the last 5 months excluding the most recent one
+        let originalCCUAverage = 0;
+        let originalCCUBuffer = 0;
         const monthsToConsider = Math.min(sortedComputeData.length - 1, 5); // Number of months to consider, up to 5, excluding the most recent one
 
         if (monthsToConsider > 0) {
-            const legacyCCUsLastMonths = sortedComputeData.slice(1, 1 + monthsToConsider).map(month => month["Legacy CCUs"]);
-            legacyCCUAverage = legacyCCUsLastMonths.reduce((sum, ccus) => sum + ccus, 0) / legacyCCUsLastMonths.length;
-            legacyCCUBuffer = Math.max(...legacyCCUsLastMonths) - legacyCCUAverage;
+            const originalCCUsLastMonths = sortedComputeData.slice(1, 1 + monthsToConsider).map(month => month["Original CCUs"]);
+            originalCCUAverage = originalCCUsLastMonths.reduce((sum, ccus) => sum + ccus, 0) / originalCCUsLastMonths.length;
+            originalCCUBuffer = Math.max(...originalCCUsLastMonths) - originalCCUAverage;
         }
 
         const sortedCoreData = coreData.sort((a, b) => new Date(b["Month of timestamp"]) - new Date(a["Month of timestamp"]));
         let coreCCUAverage = 0;
         const coreMonthsToConsider = Math.min(sortedCoreData.length - 1, 3);
         if (coreMonthsToConsider > 0) {
-            const coreCCUsLastMonths = sortedCoreData.slice(1, 1 + coreMonthsToConsider).map(month => month["CCUs Used"]);
+            const coreCCUsLastMonths = sortedCoreData.slice(1, 1 + coreMonthsToConsider).map(month => month.CCUs);
             coreCCUAverage = coreCCUsLastMonths.reduce((sum, ccus) => sum + ccus, 0) / coreCCUsLastMonths.length;
         }
 
@@ -1072,7 +1772,7 @@ function downloadHTML(data, filename, accountId) {
         let enrCCUBuffer = 0;
         const enrMonthsToConsider = Math.min(sortedEnrData.length - 1, 5);
         if (enrMonthsToConsider > 0) {
-            const enrCCUsLastMonths = sortedEnrData.slice(1, 1 + enrMonthsToConsider).map(month => month["CCUs Used"]);
+            const enrCCUsLastMonths = sortedEnrData.slice(1, 1 + enrMonthsToConsider).map(month => month.CCUs);
             enrCCUAverage = enrCCUsLastMonths.reduce((sum, ccus) => sum + ccus, 0) / enrCCUsLastMonths.length;
             enrCCUBuffer = Math.max(...enrCCUsLastMonths) - enrCCUAverage;
         }
@@ -1082,18 +1782,18 @@ function downloadHTML(data, filename, accountId) {
         let syntheticsCCUBuffer = 0;
         const syntheticsMonthsToConsider = Math.min(sortedSyntheticsData.length - 1, 3);
         if (syntheticsMonthsToConsider > 0) {
-            const syntheticsCCUsLastMonths = sortedSyntheticsData.slice(1, 1 + syntheticsMonthsToConsider).map(month => month["CCUs Used"]);
+            const syntheticsCCUsLastMonths = sortedSyntheticsData.slice(1, 1 + syntheticsMonthsToConsider).map(month => month.CCUs);
             syntheticsCCUAverage = syntheticsCCUsLastMonths.reduce((sum, ccus) => sum + ccus, 0) / syntheticsCCUsLastMonths.length;
             syntheticsCCUBuffer = Math.max(...syntheticsCCUsLastMonths) - syntheticsCCUAverage;
         }
 
         const coreCCU = enrCCUBuffer+syntheticsCCUBuffer;
-        const swing = legacyCCUBuffer+coreCCU;
+        const swing = originalCCUBuffer+coreCCU;
         const maxCoreCCU = coreCCUAverage+swing
 
         return {
-            legacyCCUAverage: formatNumber(legacyCCUAverage),
-            legacyCCUBuffer: formatNumber(legacyCCUBuffer),
+            originalCCUAverage: formatNumber(originalCCUAverage),
+            originalCCUBuffer: formatNumber(originalCCUBuffer),
             coreCCUAverage: formatNumber(coreCCUAverage),
             coreCCU: formatNumber(coreCCU),
             swing: formatNumber(swing),
@@ -1127,9 +1827,9 @@ function downloadHTML(data, filename, accountId) {
         // Prepare compute data
         computeData.forEach(row => {
             if (!combinedData[row["Month of timestamp"]]) {
-                combinedData[row["Month of timestamp"]] = { "Month of timestamp": row["Month of timestamp"], "Legacy CCUs": 0, "Alert CCUs": 0, "Dashboard CCUs": 0 };
+                combinedData[row["Month of timestamp"]] = { "Month of timestamp": row["Month of timestamp"], "Original CCUs": 0, "Alert CCUs": 0, "Dashboard CCUs": 0 };
             }
-            combinedData[row["Month of timestamp"]]["Legacy CCUs"] = row["Legacy CCUs"];
+            combinedData[row["Month of timestamp"]]["Original CCUs"] = row["Original CCUs"];
             combinedData[row["Month of timestamp"]]["Alert CCUs"] = row["Alert CCUs"];
             combinedData[row["Month of timestamp"]]["Dashboard CCUs"] = row["Dashboard CCUs"];
         });
@@ -1139,7 +1839,7 @@ function downloadHTML(data, filename, accountId) {
             if (!combinedData[row["Month of timestamp"]]) {
                 combinedData[row["Month of timestamp"]] = { "Month of timestamp": row["Month of timestamp"], "E&R CCUs": 0 };
             }
-            combinedData[row["Month of timestamp"]]["E&R CCUs"] = row["CCUs Used"] || 0;
+            combinedData[row["Month of timestamp"]]["E&R CCUs"] = row.CCUs || 0;
         });
 
         // Prepare synthetics data
@@ -1147,7 +1847,7 @@ function downloadHTML(data, filename, accountId) {
             if (!combinedData[row["Month of timestamp"]]) {
                 combinedData[row["Month of timestamp"]] = { "Month of timestamp": row["Month of timestamp"], "Synthetics CCUs": 0 };
             }
-            combinedData[row["Month of timestamp"]]["Synthetics CCUs"] = row["CCUs Used"] || 0;
+            combinedData[row["Month of timestamp"]]["Synthetics CCUs"] = row.CCUs || 0;
         });
 
         // Prepare core data
@@ -1155,7 +1855,7 @@ function downloadHTML(data, filename, accountId) {
             if (!combinedData[row["Month of timestamp"]]) {
                 combinedData[row["Month of timestamp"]] = { "Month of timestamp": row["Month of timestamp"], "Core CCUs": 0 };
             }
-            combinedData[row["Month of timestamp"]]["Core CCUs"] = row["CCUs Used"] || 0;
+            combinedData[row["Month of timestamp"]]["Core CCUs"] = row.CCUs || 0;
         });
 
         // Prepare advanced data
@@ -1163,7 +1863,7 @@ function downloadHTML(data, filename, accountId) {
             if (!combinedData[row["Month of timestamp"]]) {
                 combinedData[row["Month of timestamp"]] = { "Month of timestamp": row["Month of timestamp"], "Advanced CCUs": 0 };
             }
-            combinedData[row["Month of timestamp"]]["Advanced CCUs"] = row["CCUs Used"] || 0;
+            combinedData[row["Month of timestamp"]]["Advanced CCUs"] = row.CCUs || 0;
         });
 
         const summaryTableData = Object.values(combinedData).sort((a, b) => new Date(a["Month of timestamp"]) - new Date(b["Month of timestamp"]));
@@ -1171,12 +1871,12 @@ function downloadHTML(data, filename, accountId) {
         function generateSummaryTableHTML(tableData) {
             if (!tableData || tableData.length === 0) {
                 return {
-                    headers: ["Month of timestamp", "Legacy CCUs", "Core CCUs", "Advanced CCUs", "Alert CCUs", "Dashboard CCUs", "E&R CCUs", "Synthetics CCUs", "Total Users", "Full Users", "Core Users", "Basic Users", "Data (GB)"].map(header => `<b>${header}</b>`),
+                    headers: ["Month of timestamp", "Original CCUs", "Core CCUs", "Advanced CCUs", "Alert CCUs", "Dashboard CCUs", "E&R CCUs", "Synthetics CCUs", "Total Users", "Full Users", "Core Users", "Basic Users", "Data (GB)"].map(header => `<b>${header}</b>`),
                     data: []
                 };
             }
 
-            const headers = ["Month of timestamp", "Legacy CCUs", "Core CCUs", "Advanced CCUs", "Alert CCUs", "Dashboard CCUs", "E&R CCUs", "Synthetics CCUs", "Total Users", "Full Users", "Core Users", "Basic Users", "Data (GB)"];
+            const headers = ["Month of timestamp", "Original CCUs", "Core CCUs", "Advanced CCUs", "Alert CCUs", "Dashboard CCUs", "E&R CCUs", "Synthetics CCUs", "Total Users", "Full Users", "Core Users", "Basic Users", "Data (GB)"];
             const headerNames = headers.map(header => `<b>${header}</b>`);
             const tableDataValues = headers.map(header => tableData.map(row => formatNumber(row[header] || 0)));
 
@@ -1213,15 +1913,15 @@ function downloadHTML(data, filename, accountId) {
                     }];
 
                     const xData = summaryTableData[0].cells.values[0]; // Extract the x-axis data (Months)
-                    const legacyCCUs = summaryTableData[0].cells.values[1]; // Extract Legacy CCUs data
+                    const originalCCUs = summaryTableData[0].cells.values[1]; // Extract Original CCUs data
                     const coreCCUs = summaryTableData[0].cells.values[2]; // Extract Core CCUs data
                     const advancedCCUs = summaryTableData[0].cells.values[3]; // Extract Advanced CCUs data
 
                     const data = [
                         {
                             x: xData,
-                            y: legacyCCUs,
-                            name: 'Legacy CCUs',
+                            y: originalCCUs,
+                            name: 'Original CCUs',
                             type: 'bar'
                         },
                         {
@@ -1359,7 +2059,7 @@ function downloadHTML(data, filename, accountId) {
     function generateUsersHTML(usersData) {
         if (!usersData || usersData.length === 0) {
             return {
-                headers: ["Month of timestamp", "Legacy CCUs", "Core CCUs", "Advanced CCUs", "Alert CCUs", "Dashboard CCUs", "E&R CCUs", "Synthetics CCUs", "Total Users", "Full Users", "Core Users", "Basic Users", "Data (GB)"].map(header => `<b>${header}</b>`),
+                headers: ["Month of timestamp", "Original CCUs", "Core CCUs", "Advanced CCUs", "Alert CCUs", "Dashboard CCUs", "E&R CCUs", "Synthetics CCUs", "Total Users", "Full Users", "Core Users", "Basic Users", "Data (GB)"].map(header => `<b>${header}</b>`),
                 data: []
             };
         }
@@ -1427,7 +2127,7 @@ function downloadHTML(data, filename, accountId) {
 
     function generateComputeHTML(computeData) {
         // Extract headers and ensure "CCU Total" is the rightmost column
-        const headers = ["Month of timestamp", "Legacy CCUs", "Alert CCUs", "Dashboard CCUs", "APM", "Traces", "Browser", "Infrastructure", "Logs", "Mobile"];
+        const headers = ["Month of timestamp", "Original CCUs", "Alert CCUs", "Dashboard CCUs", "APM", "Traces", "Browser", "Infrastructure", "Logs", "Mobile"];
         const headerNames = headers.map(header => `<b>${header}</b>`);
 
         // Prepare data for Plotly table
@@ -1444,7 +2144,7 @@ function downloadHTML(data, filename, accountId) {
         };
 
         for (const [key, value] of Object.entries(latestMonthData)) {
-            if (key !== "Month of timestamp" && key !== "Legacy CCUs" && key !== "Alert CCUs" && key !== "Dashboard CCUs") {
+            if (key !== "Month of timestamp" && key !== "Original CCUs" && key !== "Alert CCUs" && key !== "Dashboard CCUs") {
                 if (key === "Alert Conditions" || key === "Alerts") {
                     const alertIndex = pieChartData.labels.indexOf("Alerts");
                     if (alertIndex === -1) {
@@ -1503,7 +2203,7 @@ function downloadHTML(data, filename, accountId) {
         `;
     }
 
-    const { legacyCCUAverage, legacyCCUBuffer, coreCCUAverage, coreCCU, swing, maxCoreCCU } = estimateCCU(data.compute, data.core, data.enr, data.synthetics);
+    const { originalCCUAverage, originalCCUBuffer, coreCCUAverage, coreCCU, swing, maxCoreCCU } = estimateCCU(data.compute, data.core, data.enr, data.synthetics);
 
     const htmlContent = `
 <!DOCTYPE html>
@@ -1537,12 +2237,12 @@ function downloadHTML(data, filename, accountId) {
     <h1>Consumption Report for Account # ${accountId}</h1>
     <table>
         <tr>
-            <td><b>Legacy CCU Average</b></td>
-            <td class="right-align">${legacyCCUAverage}</td>
+            <td><b>Original CCU Average</b></td>
+            <td class="right-align">${originalCCUAverage}</td>
         </tr>
         <tr>
-            <td><b>Legacy CCU Buffer</b></td>
-            <td class="right-align">${legacyCCUBuffer}</td>
+            <td><b>Original CCU Buffer</b></td>
+            <td class="right-align">${originalCCUBuffer}</td>
         </tr>
         <tr>
             <td><b>Core CCU Average</b></td>
@@ -1593,6 +2293,7 @@ const exportFunctions = {
     "Accounts": exportAccounts,
     "Entities": exportEntities,
     "Drop Rules": exportDropRules,
+    "Export Webhooks (MS Teams)": exportWebhooks,
     "Metric Normalization Rules": exportMetricNormalizationRules,
     "Synthetic Monitors & Scripts": exportSyntheticScripts,
     "NRQL Alert Policies & Conditions": exportNrqlConditions,
@@ -1639,6 +2340,7 @@ function addExportControls() {
         option.textContent = domain;
         domainSelect.appendChild(option);
     });
+
     // Style for the domain dropdown menu
     domainSelect.style.fontSize = '13px';
     domainSelect.style.padding = '5px';
@@ -1694,6 +2396,34 @@ function addExportControls() {
     accountIdInput.style.color = 'white';
     accountIdInput.style.borderRadius = '4px';
 
+    // Create the dropdown menu for CCU Types (initially hidden)
+    const ccuTypeSelect = document.createElement('select');
+    ccuTypeSelect.id = 'domainSelect';
+    ccuTypeSelect.style.display = 'none'; // Hide the domain dropdown menu by default
+    const ccuType = [
+        "Case 1: User Model to Original Compute",
+        "Case 2: Original Compute Renewal",
+        "Case 3: User Model to Core Compute",
+        "Case 4: Original Compute to Core Compute",
+        "Case 5: User Model with Original Compute Add-on",
+        "Case 6: User Model with Core Compute Add-on"
+    ];
+    ccuType.forEach(ccuType => {
+        const option = document.createElement('option');
+        option.value = ccuType;
+        option.textContent = ccuType;
+        ccuTypeSelect.appendChild(option);
+    });
+
+    // Style for the CCU Type dropdown menu
+    ccuTypeSelect.style.fontSize = '13px';
+    ccuTypeSelect.style.padding = '5px';
+    ccuTypeSelect.style.marginRight = '5px';
+    ccuTypeSelect.style.backgroundColor = '#3A444B';
+    ccuTypeSelect.style.border = 'none';
+    ccuTypeSelect.style.color = 'white';
+    ccuTypeSelect.style.borderRadius = '4px';
+
     // Create a wrapper div to hold the controls
     const controlsDiv = document.createElement('div');
     controlsDiv.id = 'exportControls';
@@ -1709,14 +2439,17 @@ function addExportControls() {
             tagKeyInput.style.display = 'inline'; // Show the tag key input field
             domainSelect.style.display = 'inline'; // Show the domain dropdown menu
             accountIdInput.style.display = 'none'; // Hide the account ID input field
+            ccuTypeSelect.style.display = 'none';
         } else if (e.target.value === "Consumption Report") {
             accountIdInput.style.display = 'inline'; // Show the account ID input field
+            ccuTypeSelect.style.display = 'inline';
             tagKeyInput.style.display = 'none'; // Hide the tag key input field
             domainSelect.style.display = 'none'; // Hide the domain dropdown menu
         } else {
             tagKeyInput.style.display = 'none'; // Hide the tag key input field
             domainSelect.style.display = 'none'; // Hide the domain dropdown menu
             accountIdInput.style.display = 'none'; // Hide the account ID input field
+            ccuTypeSelect.style.display = 'none';
         }
     });
 
@@ -1732,6 +2465,7 @@ function addExportControls() {
         const selectedFunctionName = select.value;
         const exportFunction = exportFunctions[selectedFunctionName];
         const selectedDomain = domainSelect.value;
+        const selectedCcuType = ccuTypeSelect.value;
         if (exportFunction) {
             startExportProgress(button);
             try {
@@ -1742,7 +2476,7 @@ function addExportControls() {
                 } else if (selectedFunctionName === "Consumption Report") {
                     const accountId = parseInt(getAccountIdFromURL()); // Ensure accountId is a number
                     if (accountId) {
-                        await exportFunction(cookie, accountId);
+                        await exportFunction(cookie, accountId, selectedCcuType);
                     } else {
                         alert('Please enter a valid Account ID');
                     }
@@ -1765,6 +2499,7 @@ function addExportControls() {
     controlsDiv.appendChild(domainSelect);
     controlsDiv.appendChild(tagKeyInput);
     controlsDiv.appendChild(accountIdInput);
+    controlsDiv.appendChild(ccuTypeSelect);
     controlsDiv.appendChild(button);
 
     // Add the controls to the webpage
