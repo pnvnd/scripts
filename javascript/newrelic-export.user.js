@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         New Relic Data Export
 // @namespace    http://newrelic.com
-// @version      4.11.2
+// @version      4.12.1
 // @description  Send NerdGraph request with cookie and export results
 // @author       Peter Nguyen, Matt Swanson
 // @match        https://one.newrelic.com/*
@@ -1414,60 +1414,49 @@ function downloadHTML(data, filename, accountId) {
         return num.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
     }
 
-    function estimateCCU(computeData, coreData, enrData, syntheticsData) {
+    function estimateCCU(computeData, coreData, syntheticsData) {
+        // Constants
+        const numberOfStandardDeviations = 1;
+
         // Sort data by "Month of timestamp" in descending order
         const sortedComputeData = computeData.sort((a, b) => new Date(b["Month of timestamp"]) - new Date(a["Month of timestamp"]));
-
-        // Calculate the average of "Original CCUs" for the last 5 months excluding the most recent one
-        let originalCCUAverage = 0;
-        let originalCCUBuffer = 0;
-        const monthsToConsider = Math.min(sortedComputeData.length - 1, 5); // Number of months to consider, up to 5, excluding the most recent one
-
-        if (monthsToConsider > 0) {
-            const originalCCUsLastMonths = sortedComputeData.slice(1, 1 + monthsToConsider).map(month => month["Original CCUs"]);
-            originalCCUAverage = originalCCUsLastMonths.reduce((sum, ccus) => sum + ccus, 0) / originalCCUsLastMonths.length;
-            originalCCUBuffer = Math.max(...originalCCUsLastMonths) - originalCCUAverage;
-        }
-
-        const sortedCoreData = coreData.sort((a, b) => new Date(b["Month of timestamp"]) - new Date(a["Month of timestamp"]));
-        let coreCCUAverage = 0;
-        const coreMonthsToConsider = Math.min(sortedCoreData.length - 1, 3);
-        if (coreMonthsToConsider > 0) {
-            const coreCCUsLastMonths = sortedCoreData.slice(1, 1 + coreMonthsToConsider).map(month => month.CCUs);
-            coreCCUAverage = coreCCUsLastMonths.reduce((sum, ccus) => sum + ccus, 0) / coreCCUsLastMonths.length;
-        }
-
-        const sortedEnrData = enrData.sort((a, b) => new Date(b["Month of timestamp"]) - new Date(a["Month of timestamp"]));
-        let enrCCUAverage = 0;
-        let enrCCUBuffer = 0;
-        const enrMonthsToConsider = Math.min(sortedEnrData.length - 1, 5);
-        if (enrMonthsToConsider > 0) {
-            const enrCCUsLastMonths = sortedEnrData.slice(1, 1 + enrMonthsToConsider).map(month => month.CCUs);
-            enrCCUAverage = enrCCUsLastMonths.reduce((sum, ccus) => sum + ccus, 0) / enrCCUsLastMonths.length;
-            enrCCUBuffer = Math.max(...enrCCUsLastMonths) - enrCCUAverage;
-        }
-
         const sortedSyntheticsData = syntheticsData.sort((a, b) => new Date(b["Month of timestamp"]) - new Date(a["Month of timestamp"]));
-        let syntheticsCCUAverage = 0;
-        let syntheticsCCUBuffer = 0;
-        const syntheticsMonthsToConsider = Math.min(sortedSyntheticsData.length - 1, 3);
-        if (syntheticsMonthsToConsider > 0) {
-            const syntheticsCCUsLastMonths = sortedSyntheticsData.slice(1, 1 + syntheticsMonthsToConsider).map(month => month.CCUs);
-            syntheticsCCUAverage = syntheticsCCUsLastMonths.reduce((sum, ccus) => sum + ccus, 0) / syntheticsCCUsLastMonths.length;
-            syntheticsCCUBuffer = Math.max(...syntheticsCCUsLastMonths) - syntheticsCCUAverage;
-        }
 
-        const coreCCU = enrCCUBuffer+syntheticsCCUBuffer;
-        const swing = originalCCUBuffer+coreCCU;
-        const maxCoreCCU = coreCCUAverage+swing
+        // Calculate the number of months to consider excluding the current month
+        const monthsToConsider = Math.min(sortedComputeData.length - 1, 12);
+
+        // Calculate the average, standard deviation, min, and max for "Original CCUs"
+        const originalCCUsLastMonths = sortedComputeData.slice(1, 1 + monthsToConsider).map(month => month["Original CCUs"]);
+        const originalCCUAverage = originalCCUsLastMonths.reduce((sum, ccus) => sum + ccus, 0) / originalCCUsLastMonths.length;
+        const originalCCUStandardDeviation = Math.sqrt(originalCCUsLastMonths.map(ccus => Math.pow(ccus - originalCCUAverage, 2)).reduce((sum, sq) => sum + sq, 0) / originalCCUsLastMonths.length);
+        const originalCCUMin = Math.min(...originalCCUsLastMonths);
+        const originalCCUMax = Math.max(...originalCCUsLastMonths);
+
+        // Calculate the average, standard deviation, min, and max for "Synthetics CCUs"
+        const syntheticsCCUsLastMonths = sortedSyntheticsData.slice(1, 1 + monthsToConsider).map(month => month.CCUs);
+        const syntheticsCCUAverage = syntheticsCCUsLastMonths.reduce((sum, ccus) => sum + ccus, 0) / syntheticsCCUsLastMonths.length;
+        const syntheticsCCUStandardDeviation = Math.sqrt(syntheticsCCUsLastMonths.map(ccus => Math.pow(ccus - syntheticsCCUAverage, 2)).reduce((sum, sq) => sum + sq, 0) / syntheticsCCUsLastMonths.length);
+        const syntheticsCCUMin = Math.min(...syntheticsCCUsLastMonths);
+        const syntheticsCCUMax = Math.max(...syntheticsCCUsLastMonths);
+
+        // Calculate core CCU ranges
+        const coreCCULowRange = (originalCCUAverage - (originalCCUStandardDeviation * numberOfStandardDeviations))
+            + (syntheticsCCUAverage - (syntheticsCCUStandardDeviation * numberOfStandardDeviations));
+        const coreCCUHighRange = (originalCCUAverage + (originalCCUStandardDeviation * numberOfStandardDeviations))
+            + (syntheticsCCUAverage + (syntheticsCCUStandardDeviation * numberOfStandardDeviations));
 
         return {
+            numberOfStandardDeviations: formatNumber(numberOfStandardDeviations),
             originalCCUAverage: formatNumber(originalCCUAverage),
-            originalCCUBuffer: formatNumber(originalCCUBuffer),
-            coreCCUAverage: formatNumber(coreCCUAverage),
-            coreCCU: formatNumber(coreCCU),
-            swing: formatNumber(swing),
-            maxCoreCCU: formatNumber(maxCoreCCU)
+            originalCCUStandardDeviation: formatNumber(originalCCUStandardDeviation),
+            originalCCUMin: formatNumber(originalCCUMin),
+            originalCCUMax: formatNumber(originalCCUMax),
+            syntheticsCCUAverage: formatNumber(syntheticsCCUAverage),
+            syntheticsCCUStandardDeviation: formatNumber(syntheticsCCUStandardDeviation),
+            syntheticsCCUMin: formatNumber(syntheticsCCUMin),
+            syntheticsCCUMax: formatNumber(syntheticsCCUMax),
+            coreCCULowRange: formatNumber(coreCCULowRange),
+            coreCCUHighRange: formatNumber(coreCCUHighRange)
         };
     }
 
@@ -1873,7 +1862,7 @@ function downloadHTML(data, filename, accountId) {
         `;
     }
 
-    const { originalCCUAverage, originalCCUBuffer, coreCCUAverage, coreCCU, swing, maxCoreCCU } = estimateCCU(data.compute, data.core, data.synthetics, data.enr);
+    const { originalCCUAverage, originalCCUStandardDeviation, originalCCUMin, originalCCUMax, syntheticsCCUAverage, syntheticsCCUStandardDeviation, syntheticsCCUMin, syntheticsCCUMax, coreCCULowRange, coreCCUHighRange, numberOfStandardDeviations } = estimateCCU(data.compute, data.core, data.synthetics, data.enr);
 
     const htmlContent = `
 <!DOCTYPE html>
@@ -1911,31 +1900,47 @@ function downloadHTML(data, filename, accountId) {
             <td class="right-align">${originalCCUAverage}</td>
         </tr>
         <tr>
-            <td><b>Original CCU Buffer</b></td>
-            <td class="right-align">${originalCCUBuffer}</td>
+            <td><b>Original CCU Standard Deviation</b></td>
+            <td class="right-align">${originalCCUStandardDeviation}</td>
         </tr>
         <tr>
-            <td><b>Core CCU Average</b></td>
-            <td class="right-align">${coreCCUAverage}</td>
+            <td><b>Original CCU Min</b></td>
+            <td class="right-align">${originalCCUMin}</td>
         </tr>
         <tr>
-            <td><b>CoreCCU (E&R+Synthetics)</b></td>
-            <td class="right-align">${coreCCU}</td>
+            <td><b>Original CCU Max</b></td>
+            <td class="right-align">${originalCCUMax}</td>
         </tr>
         <tr>
-            <td><b>Total Swing</b></td>
-            <td class="right-align">${swing}</td>
+            <td><b>Synthetics CCU Average</b></td>
+            <td class="right-align">${syntheticsCCUAverage}</td>
         </tr>
         <tr>
-            <td><b>Core CCU Min (Avg)</b></td>
-            <td class="right-align">${coreCCUAverage}</td>
+            <td><b>Synthetics CCU Standard Deviation</b></td>
+            <td class="right-align">${syntheticsCCUStandardDeviation}</td>
         </tr>
         <tr>
-            <td><b>CoreCCU Max</b></td>
-            <td class="right-align">${maxCoreCCU}</td>
+            <td><b>Synthetics CCU Min</b></td>
+            <td class="right-align">${syntheticsCCUMin}</td>
+        </tr>
+        <tr>
+            <td><b>Synthetics CCU Max</b></td>
+            <td class="right-align">${syntheticsCCUMax}</td>
+        </tr>
+        <tr>
+            <td><b>No. of Standard Deviations</b></td>
+            <td class="right-align">${numberOfStandardDeviations}</td>
+        </tr>
+        <tr>
+            <td><b>Core CCU LOW Range</b></td>
+            <td class="right-align">${coreCCULowRange}</td>
+        </tr>
+        <tr>
+            <td><b>Core CCU HIGH Range</b></td>
+            <td class="right-align">${coreCCUHighRange}</td>
         </tr>
     </table>
-    ${generateSummaryTable(data.ingest, data.users, data.compute, data.core, data.advanced, data.synthetics, data.enr )}
+    ${generateSummaryTable(data.ingest, data.users, data.compute, data.core, data.advanced, data.synthetics, data.enr)}
     ${data.ingest ? generateIngestHTML(data.ingest) : ''}
     ${data.users ? generateUsersHTML(data.users) : ''}
     ${data.compute ? generateComputeHTML(data.compute) : ''}
